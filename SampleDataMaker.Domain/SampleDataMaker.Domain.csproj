@@ -4,6 +4,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DbConnectionFactory.cs" />
+    <Compile Remove="DbConnectionSettings.cs" />
+    <Compile Remove="DbConnectionSettingsStore.cs" />
+    <Compile Remove="Entities\ITableInfoEntity.cs" />
+    <Compile Remove="Repositories\TableInfoRepository.cs" />
+  </ItemGroup>
 
 </Project>

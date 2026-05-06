@@ -1,35 +1,46 @@
 using SampleDataMaker.Domain.Entities;
+using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Domain.Services;
 
 public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
 {
     private readonly BoundaryTestValueFactory _valueFactory = new();
+    private readonly ISampleDataRepository _sampleDataRepository;
+
+    public BoundaryTestDataGenerator(ISampleDataRepository sampleDataRepository)
+    {
+        _sampleDataRepository = sampleDataRepository;
+    }
 
     public GeneratedTestData Generate(
         DbTableInfo table,
-        IReadOnlyList<DbColumnInfo> columns)
+        IReadOnlyList<DbColumnInfo> columns,
+        IReadOnlyList<ColumnSampleDataSetting>? sampleDataSettings = null)
     {
         var orderedColumns = columns
             .OrderBy(column => column.OrdinalPosition)
             .ToList();
+        var sampleProvider = new SampleDataValueProvider(
+            sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>(),
+            _sampleDataRepository);
 
         var rows = new List<IReadOnlyDictionary<string, string?>>();
         var rowNumber = 1;
 
         foreach (var column in orderedColumns)
         {
-            rows.Add(CreateRow(orderedColumns, column, _valueFactory.CreateMinimum(column), rowNumber++));
-            rows.Add(CreateRow(orderedColumns, column, _valueFactory.CreateMaximum(column), rowNumber++));
+            rows.Add(CreateRow(orderedColumns, column, _valueFactory.CreateMinimum(column), rowNumber++, sampleProvider));
+            rows.Add(CreateRow(orderedColumns, column, _valueFactory.CreateMaximum(column), rowNumber++, sampleProvider));
 
             if (column.IsNullable)
             {
-                rows.Add(CreateRow(orderedColumns, column, null, rowNumber++));
+                rows.Add(CreateRow(orderedColumns, column, null, rowNumber++, sampleProvider));
             }
 
             if (_valueFactory.CanUseEmptyString(column))
             {
-                rows.Add(CreateRow(orderedColumns, column, string.Empty, rowNumber++));
+                rows.Add(CreateRow(orderedColumns, column, string.Empty, rowNumber++, sampleProvider));
             }
         }
 
@@ -40,7 +51,8 @@ public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
         IReadOnlyList<DbColumnInfo> columns,
         DbColumnInfo targetColumn,
         string? targetValue,
-        int rowNumber)
+        int rowNumber,
+        SampleDataValueProvider sampleProvider)
     {
         return columns.ToDictionary(
             column => column.ColumnName,
@@ -54,6 +66,12 @@ public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
                 if (column.IsIndexed)
                 {
                     return _valueFactory.CreateUnique(column, rowNumber);
+                }
+
+                var sampleValue = sampleProvider.TryCreate(column, rowNumber - 1);
+                if (sampleValue != null)
+                {
+                    return sampleValue;
                 }
 
                 return _valueFactory.CreateDefault(column);

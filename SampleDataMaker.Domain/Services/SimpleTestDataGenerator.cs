@@ -1,35 +1,54 @@
 using SampleDataMaker.Domain.Entities;
+using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Domain.Services;
 
 public class SimpleTestDataGenerator : ITestDataGenerator
 {
     private readonly ITestValueFactory _testValueFactory;
+    private readonly ISampleDataRepository _sampleDataRepository;
 
-    public SimpleTestDataGenerator()
-        : this(new SimpleTestValueFactory())
+    public SimpleTestDataGenerator(ISampleDataRepository sampleDataRepository)
+        : this(new SimpleTestValueFactory(), sampleDataRepository)
     {
     }
 
-    internal SimpleTestDataGenerator(ITestValueFactory testValueFactory)
+    internal SimpleTestDataGenerator(
+        ITestValueFactory testValueFactory,
+        ISampleDataRepository sampleDataRepository)
     {
         _testValueFactory = testValueFactory;
+        _sampleDataRepository = sampleDataRepository;
     }
 
     public GeneratedTestData Generate(
         DbTableInfo table,
-        IReadOnlyList<DbColumnInfo> columns)
+        IReadOnlyList<DbColumnInfo> columns,
+        IReadOnlyList<ColumnSampleDataSetting>? sampleDataSettings = null,
+        int rowCount = 1)
     {
-        var row = columns
+        var sampleProvider = new SampleDataValueProvider(
+            sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>(),
+            _sampleDataRepository);
+        var orderedColumns = columns
             .OrderBy(column => column.OrdinalPosition)
-            .ToDictionary(
-                column => column.ColumnName,
-                column => (string?)_testValueFactory.Create(column));
+            .ToList();
+        var rows = new List<IReadOnlyDictionary<string, string?>>();
+
+        for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
+        {
+            IReadOnlyDictionary<string, string?> row = orderedColumns
+                .ToDictionary<DbColumnInfo, string, string?>(
+                    column => column.ColumnName,
+                    column => sampleProvider.TryCreate(column, rowIndex) ?? _testValueFactory.Create(column));
+
+            rows.Add(row);
+        }
 
         return new GeneratedTestData(
             table,
-            columns.OrderBy(column => column.OrdinalPosition).ToList(),
-            new List<IReadOnlyDictionary<string, string?>> { row });
+            orderedColumns,
+            rows);
     }
 }
 

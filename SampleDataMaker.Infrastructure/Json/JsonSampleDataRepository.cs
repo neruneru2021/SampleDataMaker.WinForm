@@ -1,6 +1,6 @@
+using System.Text.Json;
 using SampleDataMaker.Domain.Entities;
 using SampleDataMaker.Domain.Repositories;
-using System.Text.Json;
 
 namespace SampleDataMaker.Infrastructure.Json;
 
@@ -11,24 +11,29 @@ public class JsonSampleDataRepository : ISampleDataRepository
 
     public JsonSampleDataRepository()
     {
-        _filePath = Path.Combine(AppContext.BaseDirectory, "master-data", "sample-data.json");
+        _filePath = Path.Combine(
+            AppContext.BaseDirectory,
+            "master-data",
+            "sample-data.json");
+
         Load();
     }
 
     public IReadOnlyList<string> GetKinds()
     {
         return _items
-            .Select(x => x.Kind)
+            .Select(item => item.Kind)
+            .Where(kind => !string.IsNullOrWhiteSpace(kind))
             .Distinct()
-            .OrderBy(x => x)
+            .OrderBy(kind => kind)
             .ToList();
     }
 
     public IReadOnlyList<string> GetValues(string kind)
     {
         return _items
-            .Where(x => x.Kind == kind)
-            .Select(x => x.Value)
+            .Where(item => item.Kind == kind)
+            .Select(item => item.Value)
             .ToList();
     }
 
@@ -41,6 +46,11 @@ public class JsonSampleDataRepository : ISampleDataRepository
         }
 
         var json = File.ReadAllText(_filePath);
-        _items = JsonSerializer.Deserialize<List<SampleDataItem>>(json) ?? new();
+        _items = JsonSerializer.Deserialize<List<SampleDataItem>>(
+            json,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new List<SampleDataItem>();
     }
 }

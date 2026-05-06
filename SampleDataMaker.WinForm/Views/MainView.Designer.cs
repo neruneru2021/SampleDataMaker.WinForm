@@ -31,6 +31,7 @@
             MainSplitContainer = new SplitContainer();
             dgvConnections = new DataGridView();
             RegisterButton = new Button();
+            HistoryButton = new Button();
             ((System.ComponentModel.ISupportInitialize)MainSplitContainer).BeginInit();
             MainSplitContainer.Panel1.SuspendLayout();
             MainSplitContainer.Panel2.SuspendLayout();
@@ -51,6 +52,7 @@
             // 
             // MainSplitContainer.Panel2
             // 
+            MainSplitContainer.Panel2.Controls.Add(HistoryButton);
             MainSplitContainer.Panel2.Controls.Add(RegisterButton);
             MainSplitContainer.Size = new Size(531, 397);
             MainSplitContainer.SplitterDistance = 325;
@@ -78,6 +80,16 @@
             RegisterButton.Text = "登録";
             RegisterButton.UseVisualStyleBackColor = true;
             // 
+            // HistoryButton
+            // 
+            HistoryButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            HistoryButton.Location = new Point(353, 16);
+            HistoryButton.Name = "HistoryButton";
+            HistoryButton.Size = new Size(80, 40);
+            HistoryButton.TabIndex = 1;
+            HistoryButton.Text = "履歴";
+            HistoryButton.UseVisualStyleBackColor = true;
+            // 
             // MainView
             // 
             AutoScaleDimensions = new SizeF(7F, 18F);
@@ -101,5 +113,6 @@
         private SplitContainer MainSplitContainer;
         private Button RegisterButton;
         private DataGridView dgvConnections;
+        private Button HistoryButton;
     }
 }

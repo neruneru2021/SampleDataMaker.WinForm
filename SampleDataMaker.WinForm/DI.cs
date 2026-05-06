@@ -29,6 +29,8 @@ namespace SampleDataMaker.WinForm
             _services.AddTransient<ITestDataGenerator, SimpleTestDataGenerator>();
             _services.AddTransient<IBoundaryTestDataGenerator, BoundaryTestDataGenerator>();
             _services.AddTransient<ITestDataOutputRepository, LocalTestDataOutputRepository>();
+            _services.AddSingleton<ISampleDataRepository, JsonSampleDataRepository>();
+            _services.AddTransient<IColumnSampleDataTemplateRepository, JsonColumnSampleDataTemplateRepository>();
             _serviceProvider = _services.BuildServiceProvider();
         }
 

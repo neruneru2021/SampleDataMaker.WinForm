@@ -6,5 +6,6 @@ public interface IBoundaryTestDataGenerator
 {
     GeneratedTestData Generate(
         DbTableInfo table,
-        IReadOnlyList<DbColumnInfo> columns);
+        IReadOnlyList<DbColumnInfo> columns,
+        IReadOnlyList<ColumnSampleDataSetting>? sampleDataSettings = null);
 }

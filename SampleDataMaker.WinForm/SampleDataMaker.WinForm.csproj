@@ -24,4 +24,10 @@
     <ProjectReference Include="..\SampleDataMaker.Infrastructure\SampleDataMaker.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="master-data\sample-data.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

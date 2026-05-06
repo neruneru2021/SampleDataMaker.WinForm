@@ -6,5 +6,7 @@ public interface ITestDataGenerator
 {
     GeneratedTestData Generate(
         DbTableInfo table,
-        IReadOnlyList<DbColumnInfo> columns);
+        IReadOnlyList<DbColumnInfo> columns,
+        IReadOnlyList<ColumnSampleDataSetting>? sampleDataSettings = null,
+        int rowCount = 1);
 }

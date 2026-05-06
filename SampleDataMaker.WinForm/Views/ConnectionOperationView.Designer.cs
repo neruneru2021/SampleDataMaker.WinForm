@@ -32,12 +32,13 @@
             OverSplitContainer = new SplitContainer();
             dgvTables = new DataGridView();
             ColumnsDataGridView = new DataGridView();
+            CreateCountTextBox = new TextBox();
             TemplateNameTextBox = new TextBox();
             TemplateComboBox = new ComboBox();
             TemplateButton = new Button();
             Create2Button = new Button();
             CreateButton = new Button();
-            CreateCountTextBox = new TextBox();
+            label1 = new Label();
             ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
             splitContainer.Panel1.SuspendLayout();
             splitContainer.Panel2.SuspendLayout();
@@ -63,6 +64,7 @@
             // 
             // splitContainer.Panel2
             // 
+            splitContainer.Panel2.Controls.Add(label1);
             splitContainer.Panel2.Controls.Add(CreateCountTextBox);
             splitContainer.Panel2.Controls.Add(TemplateNameTextBox);
             splitContainer.Panel2.Controls.Add(TemplateComboBox);
@@ -115,9 +117,16 @@
             ColumnsDataGridView.Size = new Size(529, 471);
             ColumnsDataGridView.TabIndex = 1;
             // 
+            // CreateCountTextBox
+            // 
+            CreateCountTextBox.Location = new Point(628, 21);
+            CreateCountTextBox.Name = "CreateCountTextBox";
+            CreateCountTextBox.Size = new Size(74, 25);
+            CreateCountTextBox.TabIndex = 6;
+            // 
             // TemplateNameTextBox
             // 
-            TemplateNameTextBox.Location = new Point(180, 21);
+            TemplateNameTextBox.Location = new Point(135, 21);
             TemplateNameTextBox.Name = "TemplateNameTextBox";
             TemplateNameTextBox.Size = new Size(74, 25);
             TemplateNameTextBox.TabIndex = 5;
@@ -126,15 +135,15 @@
             // 
             TemplateComboBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             TemplateComboBox.FormattingEnabled = true;
-            TemplateComboBox.Location = new Point(260, 21);
+            TemplateComboBox.Location = new Point(215, 21);
             TemplateComboBox.Name = "TemplateComboBox";
-            TemplateComboBox.Size = new Size(230, 26);
+            TemplateComboBox.Size = new Size(120, 26);
             TemplateComboBox.TabIndex = 4;
             // 
             // TemplateButton
             // 
             TemplateButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            TemplateButton.Location = new Point(496, 13);
+            TemplateButton.Location = new Point(341, 13);
             TemplateButton.Name = "TemplateButton";
             TemplateButton.Size = new Size(120, 40);
             TemplateButton.TabIndex = 3;
@@ -144,7 +153,7 @@
             // Create2Button
             // 
             Create2Button.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            Create2Button.Location = new Point(622, 13);
+            Create2Button.Location = new Point(467, 13);
             Create2Button.Name = "Create2Button";
             Create2Button.Size = new Size(80, 40);
             Create2Button.TabIndex = 2;
@@ -161,12 +170,14 @@
             CreateButton.Text = "作成";
             CreateButton.UseVisualStyleBackColor = true;
             // 
-            // CreateCountTextBox
+            // label1
             // 
-            CreateCountTextBox.Location = new Point(89, 22);
-            CreateCountTextBox.Name = "CreateCountTextBox";
-            CreateCountTextBox.Size = new Size(74, 25);
-            CreateCountTextBox.TabIndex = 6;
+            label1.AutoSize = true;
+            label1.Location = new Point(553, 24);
+            label1.Name = "label1";
+            label1.Size = new Size(69, 18);
+            label1.TabIndex = 7;
+            label1.Text = "作成件数 : ";
             // 
             // ConnectionOperationView
             // 
@@ -205,5 +216,6 @@
         private ComboBox TemplateComboBox;
         private TextBox TemplateNameTextBox;
         private TextBox CreateCountTextBox;
+        private Label label1;
     }
 }

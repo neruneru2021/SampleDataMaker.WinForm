@@ -138,18 +138,18 @@
             // TemplateNameTextBox
             // 
             TemplateNameTextBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            TemplateNameTextBox.Location = new Point(276, 21);
+            TemplateNameTextBox.Location = new Point(12, 5);
             TemplateNameTextBox.Name = "TemplateNameTextBox";
-            TemplateNameTextBox.Size = new Size(74, 25);
+            TemplateNameTextBox.Size = new Size(464, 25);
             TemplateNameTextBox.TabIndex = 5;
             // 
             // TemplateComboBox
             // 
             TemplateComboBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             TemplateComboBox.FormattingEnabled = true;
-            TemplateComboBox.Location = new Point(356, 21);
+            TemplateComboBox.Location = new Point(12, 34);
             TemplateComboBox.Name = "TemplateComboBox";
-            TemplateComboBox.Size = new Size(120, 26);
+            TemplateComboBox.Size = new Size(464, 26);
             TemplateComboBox.TabIndex = 4;
             // 
             // TemplateButton

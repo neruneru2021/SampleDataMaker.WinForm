@@ -24,6 +24,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private BindingList<DbTableSelectionItem> _tablesSource = new();
     private BindingList<DbColumnSampleDataSelectionItem> _columnsSource = new();
     private BindingList<string> _sampleDataKindsSource = new();
+    private BindingList<ColumnSampleDataTemplateSelectionItem> _templatesSource = new();
 
     public BindingList<DbTableSelectionItem> TablesSource
     {
@@ -41,6 +42,12 @@ internal class ConnectionOperationViewModel : ViewModelBase
     {
         get => _sampleDataKindsSource;
         private set => SetProperty(ref _sampleDataKindsSource, value);
+    }
+
+    public BindingList<ColumnSampleDataTemplateSelectionItem> TemplatesSource
+    {
+        get => _templatesSource;
+        private set => SetProperty(ref _templatesSource, value);
     }
 
     public ConnectionOperationViewModel(
@@ -82,6 +89,8 @@ internal class ConnectionOperationViewModel : ViewModelBase
         {
             SampleDataKindsSource.Add(kind);
         }
+
+        TemplatesSource.Clear();
     }
 
     internal DbConnectionInfo GetCurrentConnection()
@@ -145,6 +154,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
         }
 
         ColumnsSource = columnsSource;
+        LoadTemplates(tableItem.Table);
     }
 
     public async Task SaveCurrentTemplate(string templateName)
@@ -168,6 +178,33 @@ internal class ConnectionOperationViewModel : ViewModelBase
         };
 
         await _templateRepository.SaveAsync(template);
+        LoadTemplates(_currentTable);
+    }
+
+    public void ApplyTemplate(ColumnSampleDataTemplateSelectionItem? templateItem)
+    {
+        if (templateItem == null)
+        {
+            return;
+        }
+
+        var template = templateItem.Template;
+
+        foreach (var columnItem in ColumnsSource)
+        {
+            var templateColumn = template.Columns.FirstOrDefault(column =>
+                column.ColumnName == columnItem.ColumnName);
+
+            if (templateColumn == null)
+            {
+                continue;
+            }
+
+            columnItem.UseSampleData = templateColumn.UseSampleData;
+            columnItem.SampleDataKind = templateColumn.SampleDataKind;
+        }
+
+        ColumnsSource.ResetBindings();
     }
 
     public async Task<TestDataOutputResult> CreateTestData(int rowCount)
@@ -259,5 +296,23 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private static string CreateTableKey(DbTableInfo table)
     {
         return $"{table.SchemaName}.{table.TableName}";
+    }
+
+    private void LoadTemplates(DbTableInfo? table)
+    {
+        if (table == null)
+        {
+            TemplatesSource = new BindingList<ColumnSampleDataTemplateSelectionItem>();
+            return;
+        }
+
+        TemplatesSource = new BindingList<ColumnSampleDataTemplateSelectionItem>(
+            _templateRepository
+                .GetAll()
+                .Where(template =>
+                    template.SchemaName == table.SchemaName
+                    && template.TableName == table.TableName)
+                .Select(template => new ColumnSampleDataTemplateSelectionItem(template))
+                .ToList());
     }
 }

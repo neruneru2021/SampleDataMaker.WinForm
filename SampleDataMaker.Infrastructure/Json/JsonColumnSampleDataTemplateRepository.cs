@@ -8,10 +8,52 @@ namespace SampleDataMaker.Infrastructure.Json;
 public class JsonColumnSampleDataTemplateRepository : IColumnSampleDataTemplateRepository
 {
     private readonly string _directoryPath;
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public JsonColumnSampleDataTemplateRepository()
     {
         _directoryPath = Path.Combine(AppContext.BaseDirectory, "master-data");
+    }
+
+    public IReadOnlyList<ColumnSampleDataTemplate> GetAll()
+    {
+        if (!Directory.Exists(_directoryPath))
+        {
+            return new List<ColumnSampleDataTemplate>();
+        }
+
+        var templates = new List<ColumnSampleDataTemplate>();
+
+        foreach (var filePath in Directory.EnumerateFiles(_directoryPath, "*.json"))
+        {
+            try
+            {
+                var json = File.ReadAllText(filePath);
+                var template = JsonSerializer.Deserialize<ColumnSampleDataTemplate>(
+                    json,
+                    _jsonSerializerOptions);
+
+                if (template == null
+                    || string.IsNullOrWhiteSpace(template.TableName)
+                    || template.Columns.Count == 0)
+                {
+                    continue;
+                }
+
+                templates.Add(template);
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return templates
+            .OrderBy(template => template.TableName)
+            .ThenBy(template => template.TemplateName)
+            .ToList();
     }
 
     public async Task SaveAsync(

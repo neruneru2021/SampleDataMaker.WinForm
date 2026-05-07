@@ -25,6 +25,20 @@ public partial class ConnectionOperationView : Form
             nameof(ColumnsDataGridView.DataSource),
             _vm,
             nameof(_vm.ColumnsSource));
+
+        TemplateComboBox.DataSource = _vm.TemplatesSource;
+        TemplateComboBox.DisplayMember = nameof(ColumnSampleDataTemplateSelectionItem.DisplayName);
+        TemplateComboBox.SelectedIndex = -1;
+        TemplateComboBox.SelectedIndexChanged += TemplateComboBoxSelectedIndexChanged;
+        _vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(_vm.TemplatesSource))
+            {
+                return;
+            }
+
+            RefreshTemplateComboBox();
+        };
     }
 
     private void SetupDgvTables()
@@ -172,7 +186,8 @@ public partial class ConnectionOperationView : Form
 
         var tableItem = dgvTables.Rows[e.RowIndex].DataBoundItem as DbTableSelectionItem;
 
-        await _vm.LoadColumns(tableItem);
+            await _vm.LoadColumns(tableItem);
+            RefreshTemplateComboBox();
     }
 
     private void DgvTablesCurrentCellDirtyStateChanged()
@@ -257,6 +272,7 @@ public partial class ConnectionOperationView : Form
             ColumnsDataGridView.EndEdit();
 
             await _vm.SaveCurrentTemplate(TemplateNameTextBox.Text);
+            RefreshTemplateComboBox();
 
             MessageBox.Show(
                 "テンプレートを保存しました。",
@@ -272,6 +288,22 @@ public partial class ConnectionOperationView : Form
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
+    }
+
+    private void TemplateComboBoxSelectedIndexChanged(object? sender, EventArgs e)
+    {
+        ColumnsDataGridView.EndEdit();
+
+        _vm.ApplyTemplate(TemplateComboBox.SelectedItem as ColumnSampleDataTemplateSelectionItem);
+    }
+
+    private void RefreshTemplateComboBox()
+    {
+        TemplateComboBox.SelectedIndexChanged -= TemplateComboBoxSelectedIndexChanged;
+        TemplateComboBox.DataSource = _vm.TemplatesSource;
+        TemplateComboBox.DisplayMember = nameof(ColumnSampleDataTemplateSelectionItem.DisplayName);
+        TemplateComboBox.SelectedIndex = -1;
+        TemplateComboBox.SelectedIndexChanged += TemplateComboBoxSelectedIndexChanged;
     }
 
     private void CreateCountTextBoxKeyPress(object? sender, KeyPressEventArgs e)

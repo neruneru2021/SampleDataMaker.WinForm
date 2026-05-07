@@ -73,6 +73,7 @@ public partial class ConnectionOperationView : Form
     private void SetupColumnsDataGridView()
     {
         ColumnsDataGridView.AutoGenerateColumns = false;
+        ColumnsDataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
         ColumnsDataGridView.Columns.Clear();
 
         ColumnsDataGridView.Columns.Add(new DataGridViewTextBoxColumn
@@ -107,10 +108,57 @@ public partial class ConnectionOperationView : Form
             HeaderText = "種類",
             DataPropertyName = nameof(DbColumnSampleDataSelectionItem.SampleDataKind),
             DataSource = _vm.SampleDataKindsSource,
-            Width = 140
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            MinimumWidth = 100,
+            Width = 110
+        });
+
+        ColumnsDataGridView.Columns.Add(new DataGridViewButtonColumn
+        {
+            Name = "ForeignKey",
+            HeaderText = "外部キー",
+            Text = "設定",
+            UseColumnTextForButtonValue = true,
+            Width = 80
         });
 
         ColumnsDataGridView.DataError += (_, __) => { };
+        ColumnsDataGridView.CellContentClick += async (_, e) => await ColumnsDataGridViewCellContentClick(e);
+    }
+
+    private async Task ColumnsDataGridViewCellContentClick(DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0)
+        {
+            return;
+        }
+
+        if (ColumnsDataGridView.Columns[e.ColumnIndex].Name != "ForeignKey")
+        {
+            return;
+        }
+
+        ColumnsDataGridView.EndEdit();
+
+        if (ColumnsDataGridView.Rows[e.RowIndex].DataBoundItem is not DbColumnSampleDataSelectionItem columnItem)
+        {
+            return;
+        }
+
+        var foreignKeySelectViewModel = DI.Resolve<ForeignKeySelectViewModel>();
+        await foreignKeySelectViewModel.Initialize(
+            _vm.GetCurrentConnection(),
+            columnItem.Column,
+            _vm.GetForeignKeySettings(columnItem));
+
+        using var view = new ForeignKeySelectView(foreignKeySelectViewModel);
+
+        if (view.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        await _vm.SaveForeignKeySettings(columnItem, view.ConfirmedSettings);
     }
 
     private async Task DgvTablesCellClick(DataGridViewCellEventArgs e)

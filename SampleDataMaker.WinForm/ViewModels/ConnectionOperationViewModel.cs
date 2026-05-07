@@ -14,7 +14,10 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private readonly ITestDataOutputRepository _testDataOutputRepository;
     private readonly ISampleDataRepository _sampleDataRepository;
     private readonly IColumnSampleDataTemplateRepository _templateRepository;
+    private readonly IForeignKeyRelationRepository _foreignKeyRelationRepository;
+    private readonly IForeignKeyTestDataApplier _foreignKeyTestDataApplier;
     private readonly Dictionary<string, BindingList<DbColumnSampleDataSelectionItem>> _columnsByTable = new();
+    private List<ForeignKeyRelationSetting> _foreignKeySettings = new();
     private DbConnectionInfo? _connection;
     private DbTableInfo? _currentTable;
 
@@ -47,7 +50,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
         IBoundaryTestDataGenerator boundaryTestDataGenerator,
         ITestDataOutputRepository testDataOutputRepository,
         ISampleDataRepository sampleDataRepository,
-        IColumnSampleDataTemplateRepository templateRepository)
+        IColumnSampleDataTemplateRepository templateRepository,
+        IForeignKeyRelationRepository foreignKeyRelationRepository,
+        IForeignKeyTestDataApplier foreignKeyTestDataApplier)
     {
         _dbTableInfoRepository = dbTableInfoRepository;
         _dbTableSchemaRepository = dbTableSchemaRepository;
@@ -56,11 +61,14 @@ internal class ConnectionOperationViewModel : ViewModelBase
         _testDataOutputRepository = testDataOutputRepository;
         _sampleDataRepository = sampleDataRepository;
         _templateRepository = templateRepository;
+        _foreignKeyRelationRepository = foreignKeyRelationRepository;
+        _foreignKeyTestDataApplier = foreignKeyTestDataApplier;
     }
 
     public async Task Initialize(DbConnectionInfo connection)
     {
         _connection = connection;
+        _foreignKeySettings = _foreignKeyRelationRepository.GetAll().ToList();
 
         var tables = await _dbTableInfoRepository.GetTablesAsync(connection);
 
@@ -74,6 +82,42 @@ internal class ConnectionOperationViewModel : ViewModelBase
         {
             SampleDataKindsSource.Add(kind);
         }
+    }
+
+    internal DbConnectionInfo GetCurrentConnection()
+    {
+        return _connection
+            ?? throw new InvalidOperationException("DB接続情報が初期化されていません。");
+    }
+
+    internal IReadOnlyList<ForeignKeyRelationSetting> GetForeignKeySettings(
+        DbColumnSampleDataSelectionItem columnItem)
+    {
+        var column = columnItem.Column;
+
+        return _foreignKeySettings
+            .Where(setting =>
+                setting.SourceSchemaName == column.SchemaName
+                && setting.SourceTableName == column.TableName
+                && setting.SourceColumnName == column.ColumnName)
+            .ToList();
+    }
+
+    internal async Task SaveForeignKeySettings(
+        DbColumnSampleDataSelectionItem columnItem,
+        IReadOnlyList<ForeignKeyRelationSetting> settings)
+    {
+        var column = columnItem.Column;
+
+        _foreignKeySettings = _foreignKeySettings
+            .Where(setting =>
+                setting.SourceSchemaName != column.SchemaName
+                || setting.SourceTableName != column.TableName
+                || setting.SourceColumnName != column.ColumnName)
+            .Concat(settings)
+            .ToList();
+
+        await _foreignKeyRelationRepository.SaveAllAsync(_foreignKeySettings);
     }
 
     public async Task LoadColumns(DbTableSelectionItem? tableItem)
@@ -153,7 +197,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
             testDataList.Add(testData);
         }
 
-        return await _testDataOutputRepository.SaveAsync(testDataList);
+        var appliedTestDataList = _foreignKeyTestDataApplier.Apply(testDataList, _foreignKeySettings);
+
+        return await _testDataOutputRepository.SaveAsync(appliedTestDataList);
     }
 
     public async Task<TestDataOutputResult> CreateBoundaryTestData()
@@ -177,7 +223,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
             testDataList.Add(testData);
         }
 
-        return await _testDataOutputRepository.SaveAsync(testDataList);
+        var appliedTestDataList = _foreignKeyTestDataApplier.Apply(testDataList, _foreignKeySettings);
+
+        return await _testDataOutputRepository.SaveAsync(appliedTestDataList);
     }
 
     private List<DbTableInfo> GetSelectedTables()

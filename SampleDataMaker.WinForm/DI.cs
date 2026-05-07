@@ -31,6 +31,9 @@ namespace SampleDataMaker.WinForm
             _services.AddTransient<ITestDataOutputRepository, LocalTestDataOutputRepository>();
             _services.AddSingleton<ISampleDataRepository, JsonSampleDataRepository>();
             _services.AddTransient<IColumnSampleDataTemplateRepository, JsonColumnSampleDataTemplateRepository>();
+            _services.AddSingleton<IForeignKeyRelationRepository, JsonForeignKeyRelationRepository>();
+            _services.AddTransient<IForeignKeyTestDataApplier, ForeignKeyTestDataApplier>();
+            _services.AddTransient<ForeignKeySelectViewModel>();
             _serviceProvider = _services.BuildServiceProvider();
         }
 

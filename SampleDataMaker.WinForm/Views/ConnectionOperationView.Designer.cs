@@ -32,13 +32,13 @@
             OverSplitContainer = new SplitContainer();
             dgvTables = new DataGridView();
             ColumnsDataGridView = new DataGridView();
+            label1 = new Label();
             CreateCountTextBox = new TextBox();
             TemplateNameTextBox = new TextBox();
             TemplateComboBox = new ComboBox();
             TemplateButton = new Button();
             Create2Button = new Button();
             CreateButton = new Button();
-            label1 = new Label();
             ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
             splitContainer.Panel1.SuspendLayout();
             splitContainer.Panel2.SuspendLayout();
@@ -71,7 +71,7 @@
             splitContainer.Panel2.Controls.Add(TemplateButton);
             splitContainer.Panel2.Controls.Add(Create2Button);
             splitContainer.Panel2.Controls.Add(CreateButton);
-            splitContainer.Size = new Size(800, 540);
+            splitContainer.Size = new Size(941, 540);
             splitContainer.SplitterDistance = 471;
             splitContainer.TabIndex = 0;
             // 
@@ -88,8 +88,8 @@
             // OverSplitContainer.Panel2
             // 
             OverSplitContainer.Panel2.Controls.Add(ColumnsDataGridView);
-            OverSplitContainer.Size = new Size(800, 471);
-            OverSplitContainer.SplitterDistance = 266;
+            OverSplitContainer.Size = new Size(941, 471);
+            OverSplitContainer.SplitterDistance = 273;
             OverSplitContainer.SplitterWidth = 5;
             OverSplitContainer.TabIndex = 2;
             // 
@@ -102,7 +102,7 @@
             dgvTables.Location = new Point(0, 0);
             dgvTables.Name = "dgvTables";
             dgvTables.RowHeadersWidth = 20;
-            dgvTables.Size = new Size(266, 471);
+            dgvTables.Size = new Size(273, 471);
             dgvTables.TabIndex = 0;
             // 
             // ColumnsDataGridView
@@ -114,19 +114,31 @@
             ColumnsDataGridView.Location = new Point(0, 0);
             ColumnsDataGridView.Name = "ColumnsDataGridView";
             ColumnsDataGridView.RowHeadersWidth = 20;
-            ColumnsDataGridView.Size = new Size(529, 471);
+            ColumnsDataGridView.Size = new Size(663, 471);
             ColumnsDataGridView.TabIndex = 1;
+            // 
+            // label1
+            // 
+            label1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            label1.AutoSize = true;
+            label1.Location = new Point(694, 24);
+            label1.Name = "label1";
+            label1.Size = new Size(69, 18);
+            label1.TabIndex = 7;
+            label1.Text = "作成件数 : ";
             // 
             // CreateCountTextBox
             // 
-            CreateCountTextBox.Location = new Point(628, 21);
+            CreateCountTextBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            CreateCountTextBox.Location = new Point(769, 21);
             CreateCountTextBox.Name = "CreateCountTextBox";
             CreateCountTextBox.Size = new Size(74, 25);
             CreateCountTextBox.TabIndex = 6;
             // 
             // TemplateNameTextBox
             // 
-            TemplateNameTextBox.Location = new Point(135, 21);
+            TemplateNameTextBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            TemplateNameTextBox.Location = new Point(276, 21);
             TemplateNameTextBox.Name = "TemplateNameTextBox";
             TemplateNameTextBox.Size = new Size(74, 25);
             TemplateNameTextBox.TabIndex = 5;
@@ -135,7 +147,7 @@
             // 
             TemplateComboBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             TemplateComboBox.FormattingEnabled = true;
-            TemplateComboBox.Location = new Point(215, 21);
+            TemplateComboBox.Location = new Point(356, 21);
             TemplateComboBox.Name = "TemplateComboBox";
             TemplateComboBox.Size = new Size(120, 26);
             TemplateComboBox.TabIndex = 4;
@@ -143,7 +155,7 @@
             // TemplateButton
             // 
             TemplateButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            TemplateButton.Location = new Point(341, 13);
+            TemplateButton.Location = new Point(482, 13);
             TemplateButton.Name = "TemplateButton";
             TemplateButton.Size = new Size(120, 40);
             TemplateButton.TabIndex = 3;
@@ -153,7 +165,7 @@
             // Create2Button
             // 
             Create2Button.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            Create2Button.Location = new Point(467, 13);
+            Create2Button.Location = new Point(608, 13);
             Create2Button.Name = "Create2Button";
             Create2Button.Size = new Size(80, 40);
             Create2Button.TabIndex = 2;
@@ -163,27 +175,18 @@
             // CreateButton
             // 
             CreateButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            CreateButton.Location = new Point(708, 13);
+            CreateButton.Location = new Point(849, 13);
             CreateButton.Name = "CreateButton";
             CreateButton.Size = new Size(80, 40);
             CreateButton.TabIndex = 1;
             CreateButton.Text = "作成";
             CreateButton.UseVisualStyleBackColor = true;
             // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(553, 24);
-            label1.Name = "label1";
-            label1.Size = new Size(69, 18);
-            label1.TabIndex = 7;
-            label1.Text = "作成件数 : ";
-            // 
             // ConnectionOperationView
             // 
             AutoScaleDimensions = new SizeF(7F, 18F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 540);
+            ClientSize = new Size(941, 540);
             Controls.Add(splitContainer);
             Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
             Margin = new Padding(3, 4, 3, 4);

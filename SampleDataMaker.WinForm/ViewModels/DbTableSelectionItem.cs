@@ -12,6 +12,8 @@ internal class DbTableSelectionItem
 
     public string TableName => Table.TableName;
 
+    public bool IsEnabled { get; set; } = true;
+
     public DbTableSelectionItem(DbTableInfo table)
     {
         Table = table;

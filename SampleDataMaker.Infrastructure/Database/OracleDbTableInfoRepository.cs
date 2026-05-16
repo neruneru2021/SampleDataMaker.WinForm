@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using Oracle.ManagedDataAccess.Client;
 using SampleDataMaker.Domain.Entities;
 using SampleDataMaker.Domain.Enums;
 using SampleDataMaker.Domain.Repositories;
@@ -6,47 +6,49 @@ using System.Data;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
-public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
+public class OracleDbTableInfoRepository : IDbTableInfoRepository
 {
     public async Task<IReadOnlyList<DbTableInfo>> GetTablesAsync(
         DbConnectionInfo connectionInfo,
         CancellationToken cancellationToken = default)
     {
-        if (connectionInfo.DbType != DbTypeKind.SqlServer)
+        if (connectionInfo.DbType != DbTypeKind.Oracle)
         {
             throw new NotSupportedException(
-                $"{connectionInfo.DbType} は SQL Server 用Repositoryでは扱えません。");
+                $"{connectionInfo.DbType} は Oracle 用Repositoryでは扱えません。");
         }
 
         var result = new List<DbTableInfo>();
 
-        await using var connection =
-            new SqlConnection(connectionInfo.ConnectionString);
-
+        await using var connection = new OracleConnection(connectionInfo.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-
+        command.BindByName = true;
         command.CommandText = """
             SELECT
-                TABLE_SCHEMA,
+                OWNER,
                 TABLE_NAME
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_TYPE = 'BASE TABLE'
+            FROM ALL_TABLES
+            WHERE
+                OWNER = :schemaName
+                AND NESTED = 'NO'
             ORDER BY
-                TABLE_SCHEMA,
+                OWNER,
                 TABLE_NAME
             """;
 
-        await using var reader =
-            await command.ExecuteReaderAsync(cancellationToken);
+        command.Parameters.Add("schemaName", OracleDbType.Varchar2).Value =
+            GetSchemaName(connectionInfo);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         while (await reader.ReadAsync(cancellationToken))
         {
             result.Add(new DbTableInfo
             {
                 SchemaName = reader.GetString(0),
-                TableName = reader.GetString(1),
+                TableName = reader.GetString(1)
             });
         }
 
@@ -58,15 +60,13 @@ public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
         DbTableInfo table,
         CancellationToken cancellationToken = default)
     {
-        if (connectionInfo.DbType != DbTypeKind.SqlServer)
+        if (connectionInfo.DbType != DbTypeKind.Oracle)
         {
             throw new NotSupportedException(
-                $"{connectionInfo.DbType} は SQL Server 用Repositoryでは扱えません。");
+                $"{connectionInfo.DbType} は Oracle 用Repositoryでは扱えません。");
         }
 
-        await using var connection =
-            new SqlConnection(connectionInfo.ConnectionString);
-
+        await using var connection = new OracleConnection(connectionInfo.ConnectionString);
         await connection.OpenAsync(cancellationToken);
 
         var quotedTableName = CreateQuotedTableName(table);
@@ -88,32 +88,30 @@ public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
                 .Select(column => $"src.{QuoteIdentifier(column.ColumnName)}"));
 
         await using var command = connection.CreateCommand();
-
+        command.BindByName = true;
         command.CommandText = $"""
-            WITH SourceRows AS
-            (
-                SELECT
-                    *,
-                    ROW_NUMBER() OVER (ORDER BY (SELECT 1)) AS {QuoteIdentifier("__SampleDataMakerRowNumber")}
-                FROM {quotedTableName}
-            )
             SELECT
                 {columnList}
-            FROM SourceRows src
+            FROM
+            (
+                SELECT
+                    base_rows.*,
+                    ROW_NUMBER() OVER (ORDER BY NULL) AS {QuoteIdentifier("__SampleDataMakerRowNumber")}
+                FROM {quotedTableName} base_rows
+            ) src
             WHERE
                 src.{QuoteIdentifier("__SampleDataMakerRowNumber")} <= 10
-                OR src.{QuoteIdentifier("__SampleDataMakerRowNumber")} BETWEEN @middleStart AND @middleEnd
-                OR src.{QuoteIdentifier("__SampleDataMakerRowNumber")} >= @tailStart
+                OR src.{QuoteIdentifier("__SampleDataMakerRowNumber")} BETWEEN :middleStart AND :middleEnd
+                OR src.{QuoteIdentifier("__SampleDataMakerRowNumber")} >= :tailStart
             ORDER BY
                 src.{QuoteIdentifier("__SampleDataMakerRowNumber")}
             """;
 
-        command.Parameters.AddWithValue("@middleStart", middleStart);
-        command.Parameters.AddWithValue("@middleEnd", middleEnd);
-        command.Parameters.AddWithValue("@tailStart", tailStart);
+        command.Parameters.Add("middleStart", OracleDbType.Int64).Value = middleStart;
+        command.Parameters.Add("middleEnd", OracleDbType.Int64).Value = middleEnd;
+        command.Parameters.Add("tailStart", OracleDbType.Int64).Value = tailStart;
 
-        await using var reader =
-            await command.ExecuteReaderAsync(cancellationToken);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         result.Clear();
         result.Load(reader);
@@ -122,20 +120,19 @@ public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
     }
 
     private static async Task<DataTable> LoadEmptyTableAsync(
-        SqlConnection connection,
+        OracleConnection connection,
         string quotedTableName,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
-
         command.CommandText = $"""
-            SELECT TOP (0)
+            SELECT
                 *
             FROM {quotedTableName}
+            WHERE 1 = 0
             """;
 
-        await using var reader =
-            await command.ExecuteReaderAsync(cancellationToken);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         var result = new DataTable();
         result.Load(reader);
@@ -144,21 +141,34 @@ public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
     }
 
     private static async Task<long> GetTableRowCountAsync(
-        SqlConnection connection,
+        OracleConnection connection,
         string quotedTableName,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
-
         command.CommandText = $"""
             SELECT
-                COUNT_BIG(*)
+                COUNT(*)
             FROM {quotedTableName}
             """;
 
         var result = await command.ExecuteScalarAsync(cancellationToken);
 
         return Convert.ToInt64(result);
+    }
+
+    private static string GetSchemaName(DbConnectionInfo connectionInfo)
+    {
+        return string.IsNullOrWhiteSpace(connectionInfo.DefaultSchema)
+            ? GetUserId(connectionInfo).ToUpperInvariant()
+            : connectionInfo.DefaultSchema.Trim().ToUpperInvariant();
+    }
+
+    private static string GetUserId(DbConnectionInfo connectionInfo)
+    {
+        var builder = new OracleConnectionStringBuilder(connectionInfo.ConnectionString);
+
+        return builder.UserID;
     }
 
     private static string CreateQuotedTableName(DbTableInfo table)
@@ -168,6 +178,6 @@ public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
 
     private static string QuoteIdentifier(string value)
     {
-        return $"[{value.Replace("]", "]]")}]";
+        return $"\"{value.Replace("\"", "\"\"")}\"";
     }
 }

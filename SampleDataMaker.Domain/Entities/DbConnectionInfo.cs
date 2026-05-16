@@ -9,5 +9,7 @@ namespace SampleDataMaker.Domain.Entities
         public DbTypeKind DbType { get; set; }
 
         public string ConnectionString { get; set; } = string.Empty;
+
+        public string DefaultSchema { get; set; } = string.Empty;
     }
 }

@@ -1,11 +1,19 @@
+using SampleDataMaker.Domain.Entities;
+using SampleDataMaker.WinForm.Services;
 using SampleDataMaker.WinForm.ViewModels;
 
 namespace SampleDataMaker.WinForm.Views
 {
+    /// <summary>
+    /// 外部キーの参照先テーブルとカラムを選択する画面です。
+    /// </summary>
     public partial class ForeignKeySelectView : Form
     {
         private readonly ForeignKeySelectViewModel _vm;
 
+        /// <summary>
+        /// 外部キー選択画面を初期化し、一覧のバインドとイベントを設定します。
+        /// </summary>
         internal ForeignKeySelectView(ForeignKeySelectViewModel vm)
         {
             InitializeComponent();
@@ -15,6 +23,7 @@ namespace SampleDataMaker.WinForm.Views
             SetupForeignKeyTableDataGridView();
             SetupForeignKeyColumnDataGridView();
             SetupForeignKeyDataGridView();
+            SetupSelectFKeyDataGridView();
 
             ForeignKeyTableDataGridView.DataBindings.Add(
                 nameof(ForeignKeyTableDataGridView.DataSource),
@@ -31,6 +40,11 @@ namespace SampleDataMaker.WinForm.Views
                 _vm,
                 nameof(_vm.ForeignKeySource));
 
+            SelectFKeyDataGridView.DataBindings.Add(
+                nameof(SelectFKeyDataGridView.DataSource),
+                _vm,
+                nameof(_vm.SelectedTablePreviewSource));
+
             ForeignKeyTableDataGridView.CellClick += async (_, e) => await ForeignKeyTableDataGridViewCellClick(e);
             ForeignKeyTableDataGridView.CellFormatting += (_, e) => ForeignKeyTableDataGridViewCellFormatting(e);
             ForeignKeyColumnDataGridView.CellDoubleClick += (_, e) => ForeignKeyColumnDataGridViewCellDoubleClick(e);
@@ -41,6 +55,19 @@ namespace SampleDataMaker.WinForm.Views
         public IReadOnlyList<SampleDataMaker.Domain.Entities.ForeignKeyRelationSetting> ConfirmedSettings { get; private set; }
             = Array.Empty<SampleDataMaker.Domain.Entities.ForeignKeyRelationSetting>();
 
+        /// <summary>
+        /// 接続先と外部キー設定元カラムが分かるように画面タイトルを設定します。
+        /// </summary>
+        internal void SetForeignKeyTitle(
+            DbConnectionInfo connection,
+            DbColumnInfo sourceColumn)
+        {
+            Text = ConnectionTitleFormatter.CreateForeignKeyTitle(connection, sourceColumn);
+        }
+
+        /// <summary>
+        /// 参照先候補テーブル一覧グリッドの表示列を設定します。
+        /// </summary>
         private void SetupForeignKeyTableDataGridView()
         {
             ForeignKeyTableDataGridView.AutoGenerateColumns = false;
@@ -63,6 +90,22 @@ namespace SampleDataMaker.WinForm.Views
             });
         }
 
+        /// <summary>
+        /// 選択テーブルの実データプレビュー用グリッドを設定します。
+        /// </summary>
+        private void SetupSelectFKeyDataGridView()
+        {
+            SelectFKeyDataGridView.AutoGenerateColumns = true;
+            SelectFKeyDataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            SelectFKeyDataGridView.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            SelectFKeyDataGridView.AllowUserToAddRows = false;
+            SelectFKeyDataGridView.AllowUserToDeleteRows = false;
+            SelectFKeyDataGridView.ReadOnly = true;
+        }
+
+        /// <summary>
+        /// 参照先候補カラム一覧グリッドの表示列を設定します。
+        /// </summary>
         private void SetupForeignKeyColumnDataGridView()
         {
             ForeignKeyColumnDataGridView.AutoGenerateColumns = false;
@@ -85,6 +128,9 @@ namespace SampleDataMaker.WinForm.Views
             });
         }
 
+        /// <summary>
+        /// 選択済み外部キー一覧グリッドの表示列を設定します。
+        /// </summary>
         private void SetupForeignKeyDataGridView()
         {
             ForeignKeyDataGridView.AutoGenerateColumns = false;
@@ -107,6 +153,9 @@ namespace SampleDataMaker.WinForm.Views
             });
         }
 
+        /// <summary>
+        /// テーブルクリック時にカラム一覧と実データプレビューを切り替えます。
+        /// </summary>
         private async Task ForeignKeyTableDataGridViewCellClick(DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -119,12 +168,17 @@ namespace SampleDataMaker.WinForm.Views
             if (tableItem?.IsEnabled == false)
             {
                 ForeignKeyColumnDataGridView.ClearSelection();
+                await _vm.LoadSelectedTablePreview(tableItem);
                 return;
             }
 
             await _vm.LoadColumns(tableItem);
+            await _vm.LoadSelectedTablePreview(tableItem);
         }
 
+        /// <summary>
+        /// 選択対象にできないテーブルをグレー表示にします。
+        /// </summary>
         private void ForeignKeyTableDataGridViewCellFormatting(DataGridViewCellFormattingEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -150,6 +204,9 @@ namespace SampleDataMaker.WinForm.Views
             row.ReadOnly = true;
         }
 
+        /// <summary>
+        /// カラムのダブルクリックで参照先外部キー候補に追加します。
+        /// </summary>
         private void ForeignKeyColumnDataGridViewCellDoubleClick(DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -162,6 +219,9 @@ namespace SampleDataMaker.WinForm.Views
             _vm.AddForeignKey(columnItem);
         }
 
+        /// <summary>
+        /// 選択済み外部キーのダブルクリックで候補から削除します。
+        /// </summary>
         private void ForeignKeyDataGridViewCellDoubleClick(DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0)
@@ -172,6 +232,9 @@ namespace SampleDataMaker.WinForm.Views
             _vm.RemoveForeignKeyAt(e.RowIndex);
         }
 
+        /// <summary>
+        /// 現在の外部キー選択内容を確定して画面を閉じます。
+        /// </summary>
         private void ConfirmedButtonClick()
         {
             ConfirmedSettings = _vm.Confirm();

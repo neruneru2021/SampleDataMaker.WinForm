@@ -10,7 +10,7 @@ using SampleDataMaker.WinForm.ViewModels;
 namespace SampleDataMaker.WinForm
 {
     /// <summary>
-    /// 依存性注入
+    /// アプリで使用するサービスとViewModelの依存関係を一元管理します。
     /// </summary>
     internal static class DI
     {
@@ -18,14 +18,17 @@ namespace SampleDataMaker.WinForm
 
         private static ServiceProvider _serviceProvider;
 
+        /// <summary>
+        /// アプリ全体で使用するサービスとViewModelを登録します。
+        /// </summary>
         static DI()
         {
             _services.AddSingleton<IDbConnectionInfoRepository, JsonDbConnectionInfoRepository>();
             _services.AddTransient<IConnectionOperationNavigator, ConnectionOperationNavigator>();
             _services.AddTransient<MainViewModel>();
             _services.AddTransient<ConnectionOperationViewModel>();
-            _services.AddTransient<IDbTableInfoRepository, SqlServerDbTableInfoRepository>();
-            _services.AddTransient<IDbTableSchemaRepository, SqlServerDbTableSchemaRepository>();
+            _services.AddTransient<IDbTableInfoRepository, CompositeDbTableInfoRepository>();
+            _services.AddTransient<IDbTableSchemaRepository, CompositeDbTableSchemaRepository>();
             _services.AddTransient<ITestDataGenerator, SimpleTestDataGenerator>();
             _services.AddTransient<IBoundaryTestDataGenerator, BoundaryTestDataGenerator>();
             _services.AddTransient<ITestDataOutputRepository, LocalTestDataOutputRepository>();
@@ -33,10 +36,14 @@ namespace SampleDataMaker.WinForm
             _services.AddTransient<IColumnSampleDataTemplateRepository, JsonColumnSampleDataTemplateRepository>();
             _services.AddSingleton<IForeignKeyRelationRepository, JsonForeignKeyRelationRepository>();
             _services.AddTransient<IForeignKeyTestDataApplier, ForeignKeyTestDataApplier>();
+            _services.AddTransient<IForeignKeyTypeMismatchConfirmationService, ForeignKeyTypeMismatchConfirmationService>();
             _services.AddTransient<ForeignKeySelectViewModel>();
             _serviceProvider = _services.BuildServiceProvider();
         }
 
+        /// <summary>
+        /// 登録済みサービスをDIコンテナから取得します。
+        /// </summary>
         internal static T Resolve<T>()
             where T : notnull
         {

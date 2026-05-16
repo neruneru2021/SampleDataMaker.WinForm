@@ -1,12 +1,20 @@
+using SampleDataMaker.Domain.Entities;
+using SampleDataMaker.WinForm.Services;
 using SampleDataMaker.WinForm.ViewModels;
 using System.Diagnostics;
 
 namespace SampleDataMaker.WinForm.Views;
 
+/// <summary>
+/// 選択したDB接続に対するテーブル選択、カラム設定、データプレビュー、テストデータ作成を行う画面です。
+/// </summary>
 public partial class ConnectionOperationView : Form
 {
     private readonly ConnectionOperationViewModel _vm;
 
+    /// <summary>
+    /// テーブル操作画面を初期化し、各グリッドと入力イベントを設定します。
+    /// </summary>
     internal ConnectionOperationView(ConnectionOperationViewModel vm)
     {
         InitializeComponent();
@@ -15,6 +23,7 @@ public partial class ConnectionOperationView : Form
 
         SetupDgvTables();
         SetupColumnsDataGridView();
+        SetupSelectTableDataGridView();
 
         dgvTables.DataBindings.Add(
             nameof(dgvTables.DataSource),
@@ -25,6 +34,11 @@ public partial class ConnectionOperationView : Form
             nameof(ColumnsDataGridView.DataSource),
             _vm,
             nameof(_vm.ColumnsSource));
+
+        SelectTableDataGridView.DataBindings.Add(
+            nameof(SelectTableDataGridView.DataSource),
+            _vm,
+            nameof(_vm.SelectedTablePreviewSource));
 
         TemplateComboBox.DataSource = _vm.TemplatesSource;
         TemplateComboBox.DisplayMember = nameof(ColumnSampleDataTemplateSelectionItem.DisplayName);
@@ -41,6 +55,17 @@ public partial class ConnectionOperationView : Form
         };
     }
 
+    /// <summary>
+    /// 開いているDB接続が分かるように画面タイトルを設定します。
+    /// </summary>
+    internal void SetConnectionTitle(DbConnectionInfo connection)
+    {
+        Text = ConnectionTitleFormatter.CreateOperationTitle(connection);
+    }
+
+    /// <summary>
+    /// テーブル一覧グリッドの表示列と操作イベントを設定します。
+    /// </summary>
     private void SetupDgvTables()
     {
         dgvTables.AutoGenerateColumns = false;
@@ -84,6 +109,9 @@ public partial class ConnectionOperationView : Form
         }
     }
 
+    /// <summary>
+    /// カラム一覧グリッドの表示列と外部キー設定ボタンを設定します。
+    /// </summary>
     private void SetupColumnsDataGridView()
     {
         ColumnsDataGridView.AutoGenerateColumns = false;
@@ -108,14 +136,6 @@ public partial class ConnectionOperationView : Form
             Width = 120
         });
 
-        ColumnsDataGridView.Columns.Add(new DataGridViewCheckBoxColumn
-        {
-            Name = "UseSampleData",
-            HeaderText = "サンプル使用",
-            DataPropertyName = nameof(DbColumnSampleDataSelectionItem.UseSampleData),
-            Width = 100
-        });
-
         ColumnsDataGridView.Columns.Add(new DataGridViewComboBoxColumn
         {
             Name = "SampleDataKind",
@@ -136,10 +156,62 @@ public partial class ConnectionOperationView : Form
             Width = 80
         });
 
+        ColumnsDataGridView.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            Name = "ForeignKeyDisplay",
+            HeaderText = "設定済み外部キー",
+            DataPropertyName = nameof(DbColumnSampleDataSelectionItem.ForeignKeyDisplay),
+            ReadOnly = true,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            MinimumWidth = 180
+        });
+
         ColumnsDataGridView.DataError += (_, __) => { };
+        ColumnsDataGridView.CellClick += ColumnsDataGridViewCellClick;
         ColumnsDataGridView.CellContentClick += async (_, e) => await ColumnsDataGridViewCellContentClick(e);
     }
 
+    /// <summary>
+    /// 選択テーブルの実データプレビュー用グリッドを設定します。
+    /// </summary>
+    private void SetupSelectTableDataGridView()
+    {
+        SelectTableDataGridView.AutoGenerateColumns = true;
+        SelectTableDataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+        SelectTableDataGridView.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+        SelectTableDataGridView.AllowUserToAddRows = false;
+        SelectTableDataGridView.AllowUserToDeleteRows = false;
+        SelectTableDataGridView.ReadOnly = true;
+    }
+
+    /// <summary>
+    /// 種類セルのクリック時にコンボボックスを開きます。
+    /// </summary>
+    private void ColumnsDataGridViewCellClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex < 0)
+        {
+            return;
+        }
+
+        if (ColumnsDataGridView.Columns[e.ColumnIndex].Name != "SampleDataKind")
+        {
+            return;
+        }
+
+        ColumnsDataGridView.BeginEdit(true);
+        BeginInvoke(() =>
+        {
+            if (ColumnsDataGridView.EditingControl is ComboBox comboBox)
+            {
+                comboBox.DroppedDown = true;
+            }
+        });
+    }
+
+    /// <summary>
+    /// 外部キー設定ボタンのクリックで参照先選択画面を開きます。
+    /// </summary>
     private async Task ColumnsDataGridViewCellContentClick(DataGridViewCellEventArgs e)
     {
         if (e.RowIndex < 0)
@@ -166,6 +238,7 @@ public partial class ConnectionOperationView : Form
             _vm.GetForeignKeySettings(columnItem));
 
         using var view = new ForeignKeySelectView(foreignKeySelectViewModel);
+        view.SetForeignKeyTitle(_vm.GetCurrentConnection(), columnItem.Column);
 
         if (view.ShowDialog(this) != DialogResult.OK)
         {
@@ -175,6 +248,9 @@ public partial class ConnectionOperationView : Form
         await _vm.SaveForeignKeySettings(columnItem, view.ConfirmedSettings);
     }
 
+    /// <summary>
+    /// テーブルクリック時にカラム一覧、実データプレビュー、テンプレート候補を切り替えます。
+    /// </summary>
     private async Task DgvTablesCellClick(DataGridViewCellEventArgs e)
     {
         if (e.RowIndex < 0)
@@ -186,10 +262,14 @@ public partial class ConnectionOperationView : Form
 
         var tableItem = dgvTables.Rows[e.RowIndex].DataBoundItem as DbTableSelectionItem;
 
-            await _vm.LoadColumns(tableItem);
-            RefreshTemplateComboBox();
+        await _vm.LoadColumns(tableItem);
+        await _vm.LoadSelectedTablePreview(tableItem);
+        RefreshTemplateComboBox();
     }
 
+    /// <summary>
+    /// チェックボックス列の変更を即時コミットします。
+    /// </summary>
     private void DgvTablesCurrentCellDirtyStateChanged()
     {
         if (!dgvTables.IsCurrentCellDirty)
@@ -203,6 +283,9 @@ public partial class ConnectionOperationView : Form
         }
     }
 
+    /// <summary>
+    /// 選択テーブルに対して指定件数の通常テストデータを作成します。
+    /// </summary>
     private async Task CreateButtonClick()
     {
         try
@@ -234,6 +317,9 @@ public partial class ConnectionOperationView : Form
         }
     }
 
+    /// <summary>
+    /// 選択テーブルに対して境界値テストデータを作成します。
+    /// </summary>
     private async Task Create2ButtonClick()
     {
         try
@@ -265,6 +351,9 @@ public partial class ConnectionOperationView : Form
         }
     }
 
+    /// <summary>
+    /// 現在のカラムサンプル設定をテンプレートとして保存します。
+    /// </summary>
     private async Task TemplateButtonClick()
     {
         try
@@ -290,6 +379,9 @@ public partial class ConnectionOperationView : Form
         }
     }
 
+    /// <summary>
+    /// 選択されたテンプレートを現在のカラム設定へ適用します。
+    /// </summary>
     private void TemplateComboBoxSelectedIndexChanged(object? sender, EventArgs e)
     {
         ColumnsDataGridView.EndEdit();
@@ -297,6 +389,9 @@ public partial class ConnectionOperationView : Form
         _vm.ApplyTemplate(TemplateComboBox.SelectedItem as ColumnSampleDataTemplateSelectionItem);
     }
 
+    /// <summary>
+    /// テンプレート一覧の再バインド時に選択イベントの重複発火を防ぎます。
+    /// </summary>
     private void RefreshTemplateComboBox()
     {
         TemplateComboBox.SelectedIndexChanged -= TemplateComboBoxSelectedIndexChanged;
@@ -306,6 +401,9 @@ public partial class ConnectionOperationView : Form
         TemplateComboBox.SelectedIndexChanged += TemplateComboBoxSelectedIndexChanged;
     }
 
+    /// <summary>
+    /// 作成件数入力を数字と制御キーだけに制限します。
+    /// </summary>
     private void CreateCountTextBoxKeyPress(object? sender, KeyPressEventArgs e)
     {
         if (char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar))
@@ -316,6 +414,9 @@ public partial class ConnectionOperationView : Form
         e.Handled = true;
     }
 
+    /// <summary>
+    /// 貼り付けなどで混入した数字以外の文字を作成件数から取り除きます。
+    /// </summary>
     private void SanitizeCreateCountTextBox()
     {
         var text = CreateCountTextBox.Text;
@@ -331,6 +432,9 @@ public partial class ConnectionOperationView : Form
         CreateCountTextBox.SelectionStart = selectionStart;
     }
 
+    /// <summary>
+    /// 作成件数の入力値を検証して数値として返します。
+    /// </summary>
     private int GetCreateCount()
     {
         if (!int.TryParse(CreateCountTextBox.Text, out var createCount) || createCount <= 0)
@@ -340,4 +444,5 @@ public partial class ConnectionOperationView : Form
 
         return createCount;
     }
+
 }

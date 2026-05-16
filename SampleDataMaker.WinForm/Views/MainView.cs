@@ -4,10 +4,16 @@ using System.Threading.Tasks;
 
 namespace SampleDataMaker.WinForm.Views;
 
+/// <summary>
+/// 登録済みDB接続の一覧表示、保存、接続先選択を行うメイン画面です。
+/// </summary>
 public partial class MainView : Form
 {
     private MainViewModel _vm;
 
+    /// <summary>
+    /// メイン画面を初期化し、接続一覧のバインドとイベントを設定します。
+    /// </summary>
     public MainView()
     {
         InitializeComponent();
@@ -21,6 +27,9 @@ public partial class MainView : Form
         this.dgvConnections.CellContentClick += async (_, __) => await DgvConnections_CellContentClick(_, __);
     }
 
+    /// <summary>
+    /// 接続一覧グリッドの表示列を設定します。
+    /// </summary>
     private void SetupDgvConnections()
     {
         dgvConnections.AutoGenerateColumns = false;
@@ -36,6 +45,14 @@ public partial class MainView : Form
 
         dgvConnections.Columns.Add(new DataGridViewTextBoxColumn
         {
+            Name = "DefaultSchema",
+            HeaderText = "DefaultSchema",
+            DataPropertyName = nameof(DbConnectionInfo.DefaultSchema),
+            Width = 120
+        });
+
+        dgvConnections.Columns.Add(new DataGridViewTextBoxColumn
+        {
             Name = "ConnectionString",
             HeaderText = "ConnectionString",
             DataPropertyName = nameof(DbConnectionInfo.ConnectionString),
@@ -43,6 +60,9 @@ public partial class MainView : Form
         });
     }
 
+    /// <summary>
+    /// 接続先を開くためのタイトルリンク列を追加します。
+    /// </summary>
     private void AddOperationButtonColumn()
     {
         var titleLinkColumn = new DataGridViewLinkColumn
@@ -58,6 +78,9 @@ public partial class MainView : Form
         dgvConnections.Columns.Insert(0, titleLinkColumn);
     }
 
+    /// <summary>
+    /// タイトルリンクのクリックをViewModelへ渡します。
+    /// </summary>
     private async Task DgvConnections_CellContentClick(
         object? sender,
         DataGridViewCellEventArgs e)

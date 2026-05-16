@@ -5,6 +5,9 @@ using System.ComponentModel;
 
 namespace SampleDataMaker.WinForm.ViewModels
 {
+    /// <summary>
+    /// 接続先一覧画面の読み込み、保存、操作画面への遷移を管理します。
+    /// </summary>
     internal class MainViewModel : ViewModelBase
     {
         private readonly IDbConnectionInfoRepository _dbConnectionInfoRepository;
@@ -18,6 +21,9 @@ namespace SampleDataMaker.WinForm.ViewModels
             private set => SetProperty(ref _dgvConnectionsSource, value);
         }
 
+        /// <summary>
+        /// 接続情報リポジトリと画面遷移サービスを受け取ります。
+        /// </summary>
         public MainViewModel(
             IDbConnectionInfoRepository dbConnectionInfoRepository,
             IConnectionOperationNavigator operationNavigator)
@@ -26,6 +32,9 @@ namespace SampleDataMaker.WinForm.ViewModels
             _operationNavigator = operationNavigator;
         }
 
+        /// <summary>
+        /// 保存済みのDB接続情報を読み込み、一覧表示用ソースに反映します。
+        /// </summary>
         internal async Task MainViewLoad()
         {
             try
@@ -48,6 +57,9 @@ namespace SampleDataMaker.WinForm.ViewModels
             }
         }
 
+        /// <summary>
+        /// 画面上で編集されたDB接続情報を保存します。
+        /// </summary>
         internal async Task Save()
         {
             try
@@ -64,11 +76,17 @@ namespace SampleDataMaker.WinForm.ViewModels
             }
         }
 
+        /// <summary>
+        /// 指定された接続情報でテーブル操作画面を開きます。
+        /// </summary>
         public async Task OpenOperationView(DbConnectionInfo connection)
         {
             await _operationNavigator.Open(connection);
         }
 
+        /// <summary>
+        /// 接続一覧のタイトルリンクがクリックされたときに操作画面へ遷移します。
+        /// </summary>
         internal async Task DgvConnectionsCellContentClick(
             string columnName,
             DbConnectionInfo? connection)

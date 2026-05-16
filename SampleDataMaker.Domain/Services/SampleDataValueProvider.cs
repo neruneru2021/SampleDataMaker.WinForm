@@ -13,7 +13,6 @@ internal class SampleDataValueProvider
         ISampleDataRepository sampleDataRepository)
     {
         _settings = settings
-            .Where(setting => setting.UseSampleData)
             .Where(setting => !string.IsNullOrWhiteSpace(setting.SampleDataKind))
             .GroupBy(setting => setting.ColumnName)
             .ToDictionary(group => group.Key, group => group.First());

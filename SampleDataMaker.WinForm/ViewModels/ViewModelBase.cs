@@ -4,17 +4,17 @@ using System.Runtime.CompilerServices;
 namespace SampleDataMaker.WinForm.ViewModels;
 
 /// <summary>
-/// ViewModel基底クラス
+/// ViewModel共通のプロパティ変更通知とUIスレッドへの通知戻しを提供します。
 /// </summary>
 public abstract class ViewModelBase : INotifyPropertyChanged
 {
     /// <summary>
-    /// 通知用
+    /// UIスレッド上でPropertyChangedを発行するための同期コンテキストです。
     /// </summary>
     private readonly SynchronizationContext _syncContext;
 
     /// <summary>
-    /// コンストラクタ
+    /// ViewModel生成時のUI同期コンテキストを保持します。
     /// </summary>
     protected ViewModelBase()
     {
@@ -26,26 +26,21 @@ public abstract class ViewModelBase : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// 通知用
+    /// バインド先へプロパティ変更を通知します。
     /// </summary>
     public event PropertyChangedEventHandler PropertyChanged;
 
     /// <summary>
-    /// Mock側でオーバーライドする為、virtualは必須
+    /// テスト時に差し替え可能な現在日時を返します。
     /// </summary>
-    /// <returns>DateTime</returns>
     public virtual DateTime GetDateTime()
     {
         return DateTime.UtcNow;
     }
 
     /// <summary>
-    /// プロパティセット用共通処理
+    /// 値が変わった場合だけフィールドを更新し、UIスレッド上で変更通知を発行します。
     /// </summary>
-    /// <typeparam name="T">T</typeparam>
-    /// <param name="field">field</param>
-    /// <param name="value">value</param>
-    /// <param name="propertyName">propertyName</param>
     /// <returns>更新有無</returns>
     protected bool SetProperty<T>(
         ref T field,

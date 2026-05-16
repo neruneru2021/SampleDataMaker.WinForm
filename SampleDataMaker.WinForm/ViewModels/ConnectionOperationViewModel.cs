@@ -2,9 +2,13 @@ using SampleDataMaker.Domain.Entities;
 using SampleDataMaker.Domain.Repositories;
 using SampleDataMaker.Domain.Services;
 using System.ComponentModel;
+using System.Data;
 
 namespace SampleDataMaker.WinForm.ViewModels;
 
+/// <summary>
+/// テーブル操作画面のテーブル選択、カラム設定、プレビュー、テストデータ作成を管理します。
+/// </summary>
 internal class ConnectionOperationViewModel : ViewModelBase
 {
     private readonly IDbTableInfoRepository _dbTableInfoRepository;
@@ -25,6 +29,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private BindingList<DbColumnSampleDataSelectionItem> _columnsSource = new();
     private BindingList<string> _sampleDataKindsSource = new();
     private BindingList<ColumnSampleDataTemplateSelectionItem> _templatesSource = new();
+    private DataTable _selectedTablePreviewSource = new();
 
     public BindingList<DbTableSelectionItem> TablesSource
     {
@@ -50,6 +55,15 @@ internal class ConnectionOperationViewModel : ViewModelBase
         private set => SetProperty(ref _templatesSource, value);
     }
 
+    public DataTable SelectedTablePreviewSource
+    {
+        get => _selectedTablePreviewSource;
+        private set => SetProperty(ref _selectedTablePreviewSource, value);
+    }
+
+    /// <summary>
+    /// テーブル操作に必要なリポジトリと生成サービスを受け取ります。
+    /// </summary>
     public ConnectionOperationViewModel(
         IDbTableInfoRepository dbTableInfoRepository,
         IDbTableSchemaRepository dbTableSchemaRepository,
@@ -72,6 +86,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
         _foreignKeyTestDataApplier = foreignKeyTestDataApplier;
     }
 
+    /// <summary>
+    /// 指定されたDB接続のテーブル一覧とサンプルデータ種別を読み込みます。
+    /// </summary>
     public async Task Initialize(DbConnectionInfo connection)
     {
         _connection = connection;
@@ -93,12 +110,18 @@ internal class ConnectionOperationViewModel : ViewModelBase
         TemplatesSource.Clear();
     }
 
+    /// <summary>
+    /// 現在操作中のDB接続情報を返します。
+    /// </summary>
     internal DbConnectionInfo GetCurrentConnection()
     {
         return _connection
             ?? throw new InvalidOperationException("DB接続情報が初期化されていません。");
     }
 
+    /// <summary>
+    /// 指定カラムに保存済みの外部キー設定を取得します。
+    /// </summary>
     internal IReadOnlyList<ForeignKeyRelationSetting> GetForeignKeySettings(
         DbColumnSampleDataSelectionItem columnItem)
     {
@@ -112,6 +135,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
             .ToList();
     }
 
+    /// <summary>
+    /// 指定カラムの外部キー設定を保存し、ViewModel内の保持情報も更新します。
+    /// </summary>
     internal async Task SaveForeignKeySettings(
         DbColumnSampleDataSelectionItem columnItem,
         IReadOnlyList<ForeignKeyRelationSetting> settings)
@@ -127,8 +153,13 @@ internal class ConnectionOperationViewModel : ViewModelBase
             .ToList();
 
         await _foreignKeyRelationRepository.SaveAllAsync(_foreignKeySettings);
+        RefreshForeignKeyDisplay(columnItem);
+        ColumnsSource.ResetBindings();
     }
 
+    /// <summary>
+    /// 選択されたテーブルのカラム一覧を読み込み、テンプレート候補も更新します。
+    /// </summary>
     public async Task LoadColumns(DbTableSelectionItem? tableItem)
     {
         if (_connection == null)
@@ -153,10 +184,35 @@ internal class ConnectionOperationViewModel : ViewModelBase
             _columnsByTable.Add(key, columnsSource);
         }
 
+        RefreshForeignKeyDisplays(columnsSource);
         ColumnsSource = columnsSource;
         LoadTemplates(tableItem.Table);
     }
 
+    /// <summary>
+    /// 選択されたテーブルの実データプレビューを読み込みます。
+    /// </summary>
+    public async Task LoadSelectedTablePreview(DbTableSelectionItem? tableItem)
+    {
+        if (_connection == null)
+        {
+            throw new InvalidOperationException("DB接続情報が初期化されていません。");
+        }
+
+        if (tableItem == null)
+        {
+            SelectedTablePreviewSource = new DataTable();
+            return;
+        }
+
+        SelectedTablePreviewSource = await _dbTableInfoRepository.GetPreviewDataAsync(
+            _connection,
+            tableItem.Table);
+    }
+
+    /// <summary>
+    /// 現在表示中のカラム設定をテンプレートとして保存します。
+    /// </summary>
     public async Task SaveCurrentTemplate(string templateName)
     {
         if (_currentTable == null)
@@ -181,6 +237,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
         LoadTemplates(_currentTable);
     }
 
+    /// <summary>
+    /// 選択されたテンプレートの設定を現在のカラム一覧へ反映します。
+    /// </summary>
     public void ApplyTemplate(ColumnSampleDataTemplateSelectionItem? templateItem)
     {
         if (templateItem == null)
@@ -200,13 +259,15 @@ internal class ConnectionOperationViewModel : ViewModelBase
                 continue;
             }
 
-            columnItem.UseSampleData = templateColumn.UseSampleData;
             columnItem.SampleDataKind = templateColumn.SampleDataKind;
         }
 
         ColumnsSource.ResetBindings();
     }
 
+    /// <summary>
+    /// 選択されたテーブルに対して指定件数の通常テストデータを生成します。
+    /// </summary>
     public async Task<TestDataOutputResult> CreateTestData(int rowCount)
     {
         if (_connection == null)
@@ -239,6 +300,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
         return await _testDataOutputRepository.SaveAsync(appliedTestDataList);
     }
 
+    /// <summary>
+    /// 選択されたテーブルに対して境界値テストデータを生成します。
+    /// </summary>
     public async Task<TestDataOutputResult> CreateBoundaryTestData()
     {
         if (_connection == null)
@@ -265,6 +329,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
         return await _testDataOutputRepository.SaveAsync(appliedTestDataList);
     }
 
+    /// <summary>
+    /// 作成対象としてチェックされたテーブル一覧を取得します。
+    /// </summary>
     private List<DbTableInfo> GetSelectedTables()
     {
         var selectedTables = TablesSource
@@ -280,6 +347,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
         return selectedTables;
     }
 
+    /// <summary>
+    /// 指定テーブルに対して画面で設定されたサンプルデータ設定を取得します。
+    /// </summary>
     private IReadOnlyList<ColumnSampleDataSetting> GetSampleDataSettings(DbTableInfo table)
     {
         var key = CreateTableKey(table);
@@ -293,11 +363,17 @@ internal class ConnectionOperationViewModel : ViewModelBase
             .ToList();
     }
 
+    /// <summary>
+    /// テーブル単位のカラム設定キャッシュに使うキーを作成します。
+    /// </summary>
     private static string CreateTableKey(DbTableInfo table)
     {
         return $"{table.SchemaName}.{table.TableName}";
     }
 
+    /// <summary>
+    /// 選択中テーブルに対応するテンプレート一覧を読み込みます。
+    /// </summary>
     private void LoadTemplates(DbTableInfo? table)
     {
         if (table == null)
@@ -314,5 +390,28 @@ internal class ConnectionOperationViewModel : ViewModelBase
                     && template.TableName == table.TableName)
                 .Select(template => new ColumnSampleDataTemplateSelectionItem(template))
                 .ToList());
+    }
+
+    /// <summary>
+    /// 表示中カラム一覧の外部キー参照先表示を更新します。
+    /// </summary>
+    private void RefreshForeignKeyDisplays(
+        BindingList<DbColumnSampleDataSelectionItem> columnsSource)
+    {
+        foreach (var columnItem in columnsSource)
+        {
+            RefreshForeignKeyDisplay(columnItem);
+        }
+    }
+
+    /// <summary>
+    /// 指定カラムに設定された外部キー参照先を表示用文字列に反映します。
+    /// </summary>
+    private void RefreshForeignKeyDisplay(DbColumnSampleDataSelectionItem columnItem)
+    {
+        columnItem.ForeignKeyDisplay = string.Join(
+            ", ",
+            GetForeignKeySettings(columnItem)
+                .Select(setting => $"{setting.ReferenceSchemaName}.{setting.ReferenceTableName}.{setting.ReferenceColumnName}"));
     }
 }

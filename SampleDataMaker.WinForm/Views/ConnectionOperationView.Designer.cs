@@ -29,9 +29,11 @@
         private void InitializeComponent()
         {
             splitContainer = new SplitContainer();
+            OverBaseSplitContainer = new SplitContainer();
             OverSplitContainer = new SplitContainer();
             dgvTables = new DataGridView();
             ColumnsDataGridView = new DataGridView();
+            SelectTableDataGridView = new DataGridView();
             label1 = new Label();
             CreateCountTextBox = new TextBox();
             TemplateNameTextBox = new TextBox();
@@ -43,12 +45,17 @@
             splitContainer.Panel1.SuspendLayout();
             splitContainer.Panel2.SuspendLayout();
             splitContainer.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)OverBaseSplitContainer).BeginInit();
+            OverBaseSplitContainer.Panel1.SuspendLayout();
+            OverBaseSplitContainer.Panel2.SuspendLayout();
+            OverBaseSplitContainer.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)OverSplitContainer).BeginInit();
             OverSplitContainer.Panel1.SuspendLayout();
             OverSplitContainer.Panel2.SuspendLayout();
             OverSplitContainer.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvTables).BeginInit();
             ((System.ComponentModel.ISupportInitialize)ColumnsDataGridView).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)SelectTableDataGridView).BeginInit();
             SuspendLayout();
             // 
             // splitContainer
@@ -60,7 +67,7 @@
             // 
             // splitContainer.Panel1
             // 
-            splitContainer.Panel1.Controls.Add(OverSplitContainer);
+            splitContainer.Panel1.Controls.Add(OverBaseSplitContainer);
             // 
             // splitContainer.Panel2
             // 
@@ -75,6 +82,24 @@
             splitContainer.SplitterDistance = 471;
             splitContainer.TabIndex = 0;
             // 
+            // OverBaseSplitContainer
+            // 
+            OverBaseSplitContainer.Dock = DockStyle.Fill;
+            OverBaseSplitContainer.Location = new Point(0, 0);
+            OverBaseSplitContainer.Name = "OverBaseSplitContainer";
+            OverBaseSplitContainer.Orientation = Orientation.Horizontal;
+            // 
+            // OverBaseSplitContainer.Panel1
+            // 
+            OverBaseSplitContainer.Panel1.Controls.Add(OverSplitContainer);
+            // 
+            // OverBaseSplitContainer.Panel2
+            // 
+            OverBaseSplitContainer.Panel2.Controls.Add(SelectTableDataGridView);
+            OverBaseSplitContainer.Size = new Size(941, 471);
+            OverBaseSplitContainer.SplitterDistance = 342;
+            OverBaseSplitContainer.TabIndex = 3;
+            // 
             // OverSplitContainer
             // 
             OverSplitContainer.Dock = DockStyle.Fill;
@@ -88,8 +113,8 @@
             // OverSplitContainer.Panel2
             // 
             OverSplitContainer.Panel2.Controls.Add(ColumnsDataGridView);
-            OverSplitContainer.Size = new Size(941, 471);
-            OverSplitContainer.SplitterDistance = 273;
+            OverSplitContainer.Size = new Size(941, 342);
+            OverSplitContainer.SplitterDistance = 272;
             OverSplitContainer.SplitterWidth = 5;
             OverSplitContainer.TabIndex = 2;
             // 
@@ -102,7 +127,7 @@
             dgvTables.Location = new Point(0, 0);
             dgvTables.Name = "dgvTables";
             dgvTables.RowHeadersWidth = 20;
-            dgvTables.Size = new Size(273, 471);
+            dgvTables.Size = new Size(272, 342);
             dgvTables.TabIndex = 0;
             // 
             // ColumnsDataGridView
@@ -114,8 +139,23 @@
             ColumnsDataGridView.Location = new Point(0, 0);
             ColumnsDataGridView.Name = "ColumnsDataGridView";
             ColumnsDataGridView.RowHeadersWidth = 20;
-            ColumnsDataGridView.Size = new Size(663, 471);
+            ColumnsDataGridView.Size = new Size(664, 342);
             ColumnsDataGridView.TabIndex = 1;
+            // 
+            // SelectTableDataGridView
+            // 
+            SelectTableDataGridView.AllowUserToAddRows = false;
+            SelectTableDataGridView.AllowUserToDeleteRows = false;
+            SelectTableDataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            SelectTableDataGridView.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            SelectTableDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            SelectTableDataGridView.Dock = DockStyle.Fill;
+            SelectTableDataGridView.Location = new Point(0, 0);
+            SelectTableDataGridView.Name = "SelectTableDataGridView";
+            SelectTableDataGridView.ReadOnly = true;
+            SelectTableDataGridView.RowHeadersWidth = 20;
+            SelectTableDataGridView.Size = new Size(941, 125);
+            SelectTableDataGridView.TabIndex = 0;
             // 
             // label1
             // 
@@ -198,12 +238,17 @@
             splitContainer.Panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
             splitContainer.ResumeLayout(false);
+            OverBaseSplitContainer.Panel1.ResumeLayout(false);
+            OverBaseSplitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)OverBaseSplitContainer).EndInit();
+            OverBaseSplitContainer.ResumeLayout(false);
             OverSplitContainer.Panel1.ResumeLayout(false);
             OverSplitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)OverSplitContainer).EndInit();
             OverSplitContainer.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)dgvTables).EndInit();
             ((System.ComponentModel.ISupportInitialize)ColumnsDataGridView).EndInit();
+            ((System.ComponentModel.ISupportInitialize)SelectTableDataGridView).EndInit();
             ResumeLayout(false);
         }
 
@@ -220,5 +265,7 @@
         private TextBox TemplateNameTextBox;
         private TextBox CreateCountTextBox;
         private Label label1;
+        private SplitContainer OverBaseSplitContainer;
+        private DataGridView SelectTableDataGridView;
     }
 }

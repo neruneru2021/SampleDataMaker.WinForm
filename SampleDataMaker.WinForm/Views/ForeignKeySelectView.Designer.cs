@@ -34,6 +34,8 @@
             TblSplitContainer = new SplitContainer();
             KeyTableSplitContainer = new SplitContainer();
             BaseSplitContainer = new SplitContainer();
+            UpperSplitContainer = new SplitContainer();
+            SelectFKeyDataGridView = new DataGridView();
             ConfirmedButton = new Button();
             ((System.ComponentModel.ISupportInitialize)ForeignKeyTableDataGridView).BeginInit();
             ((System.ComponentModel.ISupportInitialize)ForeignKeyColumnDataGridView).BeginInit();
@@ -50,6 +52,11 @@
             BaseSplitContainer.Panel1.SuspendLayout();
             BaseSplitContainer.Panel2.SuspendLayout();
             BaseSplitContainer.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)UpperSplitContainer).BeginInit();
+            UpperSplitContainer.Panel1.SuspendLayout();
+            UpperSplitContainer.Panel2.SuspendLayout();
+            UpperSplitContainer.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)SelectFKeyDataGridView).BeginInit();
             SuspendLayout();
             // 
             // ForeignKeyTableDataGridView
@@ -60,7 +67,7 @@
             ForeignKeyTableDataGridView.Margin = new Padding(3, 4, 3, 4);
             ForeignKeyTableDataGridView.Name = "ForeignKeyTableDataGridView";
             ForeignKeyTableDataGridView.RowHeadersWidth = 20;
-            ForeignKeyTableDataGridView.Size = new Size(271, 389);
+            ForeignKeyTableDataGridView.Size = new Size(268, 335);
             ForeignKeyTableDataGridView.TabIndex = 0;
             // 
             // ForeignKeyColumnDataGridView
@@ -73,7 +80,7 @@
             ForeignKeyColumnDataGridView.Margin = new Padding(3, 4, 3, 4);
             ForeignKeyColumnDataGridView.Name = "ForeignKeyColumnDataGridView";
             ForeignKeyColumnDataGridView.RowHeadersWidth = 20;
-            ForeignKeyColumnDataGridView.Size = new Size(378, 389);
+            ForeignKeyColumnDataGridView.Size = new Size(376, 335);
             ForeignKeyColumnDataGridView.TabIndex = 1;
             // 
             // ForeignKeyDataGridView
@@ -86,7 +93,7 @@
             ForeignKeyDataGridView.Margin = new Padding(3, 4, 3, 4);
             ForeignKeyDataGridView.Name = "ForeignKeyDataGridView";
             ForeignKeyDataGridView.RowHeadersWidth = 20;
-            ForeignKeyDataGridView.Size = new Size(281, 389);
+            ForeignKeyDataGridView.Size = new Size(280, 335);
             ForeignKeyDataGridView.TabIndex = 2;
             // 
             // TblSplitContainer
@@ -102,8 +109,8 @@
             // TblSplitContainer.Panel2
             // 
             TblSplitContainer.Panel2.Controls.Add(ForeignKeyDataGridView);
-            TblSplitContainer.Size = new Size(938, 389);
-            TblSplitContainer.SplitterDistance = 653;
+            TblSplitContainer.Size = new Size(932, 335);
+            TblSplitContainer.SplitterDistance = 648;
             TblSplitContainer.TabIndex = 3;
             // 
             // KeyTableSplitContainer
@@ -119,8 +126,8 @@
             // KeyTableSplitContainer.Panel2
             // 
             KeyTableSplitContainer.Panel2.Controls.Add(ForeignKeyColumnDataGridView);
-            KeyTableSplitContainer.Size = new Size(653, 389);
-            KeyTableSplitContainer.SplitterDistance = 271;
+            KeyTableSplitContainer.Size = new Size(648, 335);
+            KeyTableSplitContainer.SplitterDistance = 268;
             KeyTableSplitContainer.TabIndex = 2;
             // 
             // BaseSplitContainer
@@ -132,19 +139,50 @@
             // 
             // BaseSplitContainer.Panel1
             // 
-            BaseSplitContainer.Panel1.Controls.Add(TblSplitContainer);
+            BaseSplitContainer.Panel1.Controls.Add(UpperSplitContainer);
             // 
             // BaseSplitContainer.Panel2
             // 
             BaseSplitContainer.Panel2.Controls.Add(ConfirmedButton);
-            BaseSplitContainer.Size = new Size(938, 447);
-            BaseSplitContainer.SplitterDistance = 389;
+            BaseSplitContainer.Size = new Size(932, 564);
+            BaseSplitContainer.SplitterDistance = 490;
             BaseSplitContainer.TabIndex = 4;
+            // 
+            // UpperSplitContainer
+            // 
+            UpperSplitContainer.Dock = DockStyle.Fill;
+            UpperSplitContainer.Location = new Point(0, 0);
+            UpperSplitContainer.Name = "UpperSplitContainer";
+            UpperSplitContainer.Orientation = Orientation.Horizontal;
+            // 
+            // UpperSplitContainer.Panel1
+            // 
+            UpperSplitContainer.Panel1.Controls.Add(TblSplitContainer);
+            // 
+            // UpperSplitContainer.Panel2
+            // 
+            UpperSplitContainer.Panel2.Controls.Add(SelectFKeyDataGridView);
+            UpperSplitContainer.Size = new Size(932, 490);
+            UpperSplitContainer.SplitterDistance = 335;
+            UpperSplitContainer.TabIndex = 4;
+            // 
+            // SelectFKeyDataGridView
+            // 
+            SelectFKeyDataGridView.AllowUserToAddRows = false;
+            SelectFKeyDataGridView.AllowUserToDeleteRows = false;
+            SelectFKeyDataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            SelectFKeyDataGridView.Dock = DockStyle.Fill;
+            SelectFKeyDataGridView.Location = new Point(0, 0);
+            SelectFKeyDataGridView.Name = "SelectFKeyDataGridView";
+            SelectFKeyDataGridView.ReadOnly = true;
+            SelectFKeyDataGridView.RowHeadersWidth = 20;
+            SelectFKeyDataGridView.Size = new Size(932, 151);
+            SelectFKeyDataGridView.TabIndex = 0;
             // 
             // ConfirmedButton
             // 
             ConfirmedButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            ConfirmedButton.Location = new Point(847, 7);
+            ConfirmedButton.Location = new Point(841, 23);
             ConfirmedButton.Name = "ConfirmedButton";
             ConfirmedButton.Size = new Size(80, 40);
             ConfirmedButton.TabIndex = 2;
@@ -155,7 +193,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 18F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(938, 447);
+            ClientSize = new Size(932, 564);
             Controls.Add(BaseSplitContainer);
             Font = new Font("メイリオ", 9F, FontStyle.Regular, GraphicsUnit.Point, 128);
             Margin = new Padding(3, 4, 3, 4);
@@ -176,6 +214,11 @@
             BaseSplitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)BaseSplitContainer).EndInit();
             BaseSplitContainer.ResumeLayout(false);
+            UpperSplitContainer.Panel1.ResumeLayout(false);
+            UpperSplitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)UpperSplitContainer).EndInit();
+            UpperSplitContainer.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)SelectFKeyDataGridView).EndInit();
             ResumeLayout(false);
         }
 
@@ -188,5 +231,7 @@
         private SplitContainer BaseSplitContainer;
         private Button ConfirmedButton;
         private SplitContainer KeyTableSplitContainer;
+        private SplitContainer UpperSplitContainer;
+        private DataGridView SelectFKeyDataGridView;
     }
 }

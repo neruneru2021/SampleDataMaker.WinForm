@@ -65,8 +65,12 @@ internal class SimpleTestValueFactory : ITestValueFactory
         "nchar",
         "varchar",
         "nvarchar",
+        "varchar2",
+        "nvarchar2",
         "text",
         "ntext",
+        "clob",
+        "nclob",
         "uniqueidentifier",
         "xml"
     };
@@ -83,7 +87,10 @@ internal class SimpleTestValueFactory : ITestValueFactory
         "money",
         "smallmoney",
         "float",
-        "real"
+        "real",
+        "number",
+        "binary_float",
+        "binary_double"
     };
 
     private static readonly HashSet<string> DateTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -93,33 +100,51 @@ internal class SimpleTestValueFactory : ITestValueFactory
         "datetime2",
         "datetimeoffset",
         "smalldatetime",
-        "time"
+        "time",
+        "timestamp",
+        "timestamp with time zone",
+        "timestamp with local time zone"
     };
 
     public string Create(DbColumnInfo column)
     {
-        if (TextTypes.Contains(column.DataType))
+        var dataType = NormalizeDataType(column.DataType);
+
+        if (TextTypes.Contains(dataType))
         {
             return "A";
         }
 
-        if (NumberTypes.Contains(column.DataType))
+        if (NumberTypes.Contains(dataType))
         {
             return "1";
         }
 
-        if (DateTypes.Contains(column.DataType))
+        if (DateTypes.Contains(dataType))
         {
             return "2026-01-01";
         }
 
-        if (column.DataType.Equals("binary", StringComparison.OrdinalIgnoreCase)
-            || column.DataType.Equals("varbinary", StringComparison.OrdinalIgnoreCase)
-            || column.DataType.Equals("image", StringComparison.OrdinalIgnoreCase))
+        if (dataType.Equals("binary", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("varbinary", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("image", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("raw", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("long raw", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("blob", StringComparison.OrdinalIgnoreCase))
         {
             return "0x01";
         }
 
         return string.Empty;
+    }
+
+    private static string NormalizeDataType(string dataType)
+    {
+        var normalized = dataType.Trim();
+        var parenthesisIndex = normalized.IndexOf('(');
+
+        return parenthesisIndex < 0
+            ? normalized
+            : normalized[..parenthesisIndex].Trim();
     }
 }

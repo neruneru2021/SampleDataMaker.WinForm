@@ -61,12 +61,14 @@ public sealed class SimpleTestDataGeneratorTests
         // MockにはSetupを書かず「呼ばれないこと」をVerifyで確認します。
         var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
 
-        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var generator = new SimpleTestDataGenerator(
+            new SimpleTestValueFactory(() => new DateTimeOffset(2026, 5, 17, 10, 30, 45, TimeSpan.FromHours(9))),
+            sampleDataRepositoryMock.Object);
         var table = CreateTable("dbo", "Users");
         var columns = new[]
         {
             CreateColumn("Id", "int", ordinalPosition: 1),
-            CreateColumn("Name", "varchar", ordinalPosition: 2),
+            CreateColumn("Name", "varchar", ordinalPosition: 2, maxLength: 100),
             CreateColumn("CreatedAt", "datetime", ordinalPosition: 3)
         };
 
@@ -75,10 +77,68 @@ public sealed class SimpleTestDataGeneratorTests
 
         // Assert
         result.Rows[0]["Id"].Is("1");
-        result.Rows[0]["Name"].Is("A");
-        result.Rows[0]["CreatedAt"].Is("2026-01-01");
+        result.Rows[0]["Name"].Is("1-Fixed-VARCHAR(100)");
+        result.Rows[0]["CreatedAt"].Is("2026-05-17 10:30:45");
 
         sampleDataRepositoryMock.Verify(x => x.GetValues(It.IsAny<string>()), Times.Never);
+    }
+
+    [TestMethod]
+    public void 文字列型は桁数に収まる表記まで短くして値を作成する()
+    {
+        // Arrange
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Products");
+        var columns = new[]
+        {
+            CreateColumn("FixedFull", "varchar", ordinalPosition: 1, maxLength: 100),
+            CreateColumn("FixedShort", "varchar", ordinalPosition: 2, maxLength: 12),
+            CreateColumn("FixedVeryShort", "varchar", ordinalPosition: 3, maxLength: 7),
+            CreateColumn("FixedMinimum", "varchar", ordinalPosition: 4, maxLength: 1),
+            CreateColumn("AdjustableFull", "nvarchar", ordinalPosition: 5, maxLength: 200),
+            CreateColumn("AdjustableShort", "nvarchar", ordinalPosition: 6, maxLength: 30),
+            CreateColumn("AdjustableVeryShort", "nvarchar", ordinalPosition: 7, maxLength: 24),
+            CreateColumn("AdjustableMinimum", "nvarchar", ordinalPosition: 8, maxLength: 2)
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, rowCount: 1);
+
+        // Assert
+        result.Rows[0]["FixedFull"].Is("1-Fixed-VARCHAR(100)");
+        result.Rows[0]["FixedShort"].Is("2-Fixed(12)");
+        result.Rows[0]["FixedVeryShort"].Is("3-Fixed");
+        result.Rows[0]["FixedMinimum"].Is("4");
+        result.Rows[0]["AdjustableFull"].Is("5-Adjustable-NVARCHAR(100)");
+        result.Rows[0]["AdjustableShort"].Is("6-Adjustable 15");
+        result.Rows[0]["AdjustableVeryShort"].Is("7-Adjustable");
+        result.Rows[0]["AdjustableMinimum"].Is("8");
+    }
+
+    [TestMethod]
+    public void 小数型とバイナリ型は連番を使って値を作成する()
+    {
+        // Arrange
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Products");
+        var columns = new[]
+        {
+            CreateColumn("Price1", "decimal", ordinalPosition: 1, numericScale: 3),
+            CreateColumn("Price2", "numeric", ordinalPosition: 2, numericScale: 3),
+            CreateColumn("Image1", "varbinary", ordinalPosition: 3),
+            CreateColumn("Image2", "binary", ordinalPosition: 4)
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, rowCount: 1);
+
+        // Assert
+        result.Rows[0]["Price1"].Is("1.001");
+        result.Rows[0]["Price2"].Is("2.001");
+        result.Rows[0]["Image1"].Is("0x01");
+        result.Rows[0]["Image2"].Is("0x02");
     }
 
     private static DbTableInfo CreateTable(string schemaName, string tableName)
@@ -93,7 +153,9 @@ public sealed class SimpleTestDataGeneratorTests
     private static DbColumnInfo CreateColumn(
         string columnName,
         string dataType,
-        int ordinalPosition)
+        int ordinalPosition,
+        int? maxLength = null,
+        int? numericScale = null)
     {
         return new DbColumnInfo
         {
@@ -101,7 +163,9 @@ public sealed class SimpleTestDataGeneratorTests
             TableName = "Users",
             ColumnName = columnName,
             DataType = dataType,
-            OrdinalPosition = ordinalPosition
+            OrdinalPosition = ordinalPosition,
+            MaxLength = maxLength,
+            NumericScale = numericScale
         };
     }
 }

@@ -1,0 +1,30 @@
+{
+  "Connections": [
+    {
+      "Title": "ローカル SQL Server Express",
+      "DbType": "SqlServer",
+      "ConnectionString": "Server=localhost\\SQLEXPRESS;Database=Sample;Trusted_Connection=True;TrustServerCertificate=True;"
+    },
+    {
+      "Title": "ローカル SQL Server Docker",
+      "DbType": "SqlServer",
+      "ConnectionString": "Server=localhost,1433;Database=SampleDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
+    },
+    {
+      "Title": "ローカル Oracle XE",
+      "DbType": "Oracle",
+      "ConnectionString": "User Id=TESTUSER;Password=TESTPASS;Data Source=localhost:1521/XEPDB1;"
+    },
+    {
+      "Title": "Test",
+      "DbType": "SqlServer",
+      "ConnectionString": "Server=localhost,1433;Database=SampleDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
+    },
+    {
+      "Title": "ローカル Oracle XE PLMCONSOLE",
+      "DbType": "Oracle",
+      "ConnectionString": "User Id=system;Password=oracle;Data Source=localhost:1521/XEPDB1;",
+      "DefaultSchema": "PLMCONSOLE"
+    }
+  ]
+}

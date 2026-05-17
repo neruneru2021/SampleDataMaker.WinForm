@@ -30,8 +30,8 @@
         {
             MainSplitContainer = new SplitContainer();
             dgvConnections = new DataGridView();
+            SampleRegisterButton = new Button();
             RegisterButton = new Button();
-            HistoryButton = new Button();
             ((System.ComponentModel.ISupportInitialize)MainSplitContainer).BeginInit();
             MainSplitContainer.Panel1.SuspendLayout();
             MainSplitContainer.Panel2.SuspendLayout();
@@ -52,7 +52,7 @@
             // 
             // MainSplitContainer.Panel2
             // 
-            MainSplitContainer.Panel2.Controls.Add(HistoryButton);
+            MainSplitContainer.Panel2.Controls.Add(SampleRegisterButton);
             MainSplitContainer.Panel2.Controls.Add(RegisterButton);
             MainSplitContainer.Size = new Size(531, 397);
             MainSplitContainer.SplitterDistance = 325;
@@ -70,6 +70,16 @@
             dgvConnections.Size = new Size(531, 325);
             dgvConnections.TabIndex = 0;
             // 
+            // SampleRegisterButton
+            // 
+            SampleRegisterButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            SampleRegisterButton.Location = new Point(333, 16);
+            SampleRegisterButton.Name = "SampleRegisterButton";
+            SampleRegisterButton.Size = new Size(100, 40);
+            SampleRegisterButton.TabIndex = 1;
+            SampleRegisterButton.Text = "Sample登録";
+            SampleRegisterButton.UseVisualStyleBackColor = true;
+            // 
             // RegisterButton
             // 
             RegisterButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
@@ -79,16 +89,6 @@
             RegisterButton.TabIndex = 0;
             RegisterButton.Text = "登録";
             RegisterButton.UseVisualStyleBackColor = true;
-            // 
-            // HistoryButton
-            // 
-            HistoryButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            HistoryButton.Location = new Point(353, 16);
-            HistoryButton.Name = "HistoryButton";
-            HistoryButton.Size = new Size(80, 40);
-            HistoryButton.TabIndex = 1;
-            HistoryButton.Text = "履歴";
-            HistoryButton.UseVisualStyleBackColor = true;
             // 
             // MainView
             // 
@@ -113,6 +113,6 @@
         private SplitContainer MainSplitContainer;
         private Button RegisterButton;
         private DataGridView dgvConnections;
-        private Button HistoryButton;
+        private Button SampleRegisterButton;
     }
 }

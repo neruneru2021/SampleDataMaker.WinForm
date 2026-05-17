@@ -138,7 +138,90 @@ public sealed class ConnectionOperationViewModelTests
         columnItem.ForeignKeyDisplay.Is("PLMCONSOLE.CLINICS.CLINIC_ID");
         fixture.ForeignKeyRelationRepositoryMock.Verify(
             x => x.SaveAllAsync(
-                It.Is<IReadOnlyList<ForeignKeyRelationSetting>>(items => items.Count == 1),
+                It.Is<IReadOnlyList<ForeignKeyRelationSetting>>(items =>
+                    items.Count == 2
+                    && items.Any(setting =>
+                        setting.SourceSchemaName == "PLMCONSOLE"
+                        && setting.SourceTableName == "USERS"
+                        && setting.SourceColumnName == "CLINIC_ID"
+                        && setting.ReferenceSchemaName == "PLMCONSOLE"
+                        && setting.ReferenceTableName == "CLINICS"
+                        && setting.ReferenceColumnName == "CLINIC_ID")
+                    && items.Any(setting =>
+                        setting.SourceSchemaName == "PLMCONSOLE"
+                        && setting.SourceTableName == "CLINICS"
+                        && setting.SourceColumnName == "CLINIC_ID"
+                        && setting.ReferenceSchemaName == "PLMCONSOLE"
+                        && setting.ReferenceTableName == "USERS"
+                        && setting.ReferenceColumnName == "CLINIC_ID")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public async Task SaveForeignKeySettingsは解除時に双方向の外部キー設定を削除する()
+    {
+        // Arrange
+        var fixture = CreateFixture();
+        var connection = CreateConnection();
+        var usersTable = CreateTable("PLMCONSOLE", "USERS");
+        var tableItem = new DbTableSelectionItem(usersTable);
+        fixture.ForeignKeyRelationRepositoryMock
+            .Setup(x => x.GetAll())
+            .Returns(new[]
+            {
+                new ForeignKeyRelationSetting
+                {
+                    SourceSchemaName = "PLMCONSOLE",
+                    SourceTableName = "USERS",
+                    SourceColumnName = "CLINIC_ID",
+                    ReferenceSchemaName = "PLMCONSOLE",
+                    ReferenceTableName = "CLINICS",
+                    ReferenceColumnName = "CLINIC_ID"
+                },
+                new ForeignKeyRelationSetting
+                {
+                    SourceSchemaName = "PLMCONSOLE",
+                    SourceTableName = "CLINICS",
+                    SourceColumnName = "CLINIC_ID",
+                    ReferenceSchemaName = "PLMCONSOLE",
+                    ReferenceTableName = "USERS",
+                    ReferenceColumnName = "CLINIC_ID"
+                },
+                new ForeignKeyRelationSetting
+                {
+                    SourceSchemaName = "PLMCONSOLE",
+                    SourceTableName = "USERS",
+                    SourceColumnName = "DEPARTMENT_ID",
+                    ReferenceSchemaName = "PLMCONSOLE",
+                    ReferenceTableName = "DEPARTMENTS",
+                    ReferenceColumnName = "DEPARTMENT_ID"
+                }
+            });
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(connection, usersTable, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                CreateColumn(usersTable, "CLINIC_ID", "NUMBER", 1)
+            });
+
+        await fixture.ViewModel.Initialize(connection);
+        await fixture.ViewModel.LoadColumns(tableItem);
+        var columnItem = fixture.ViewModel.ColumnsSource[0];
+
+        // Act
+        await fixture.ViewModel.SaveForeignKeySettings(
+            columnItem,
+            Array.Empty<ForeignKeyRelationSetting>());
+
+        // Assert
+        columnItem.ForeignKeyDisplay.Is("");
+        fixture.ForeignKeyRelationRepositoryMock.Verify(
+            x => x.SaveAllAsync(
+                It.Is<IReadOnlyList<ForeignKeyRelationSetting>>(items =>
+                    items.Count == 1
+                    && items[0].SourceTableName == "USERS"
+                    && items[0].SourceColumnName == "DEPARTMENT_ID"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

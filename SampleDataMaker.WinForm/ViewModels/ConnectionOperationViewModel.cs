@@ -143,13 +143,21 @@ internal class ConnectionOperationViewModel : ViewModelBase
         IReadOnlyList<ForeignKeyRelationSetting> settings)
     {
         var column = columnItem.Column;
+        var currentColumnSettings = _foreignKeySettings
+            .Where(setting => IsSourceColumn(setting, column))
+            .ToList();
+        var replacementSettings = settings
+            .SelectMany(setting => new[]
+            {
+                setting,
+                CreateReverseSetting(setting)
+            });
 
         _foreignKeySettings = _foreignKeySettings
-            .Where(setting =>
-                setting.SourceSchemaName != column.SchemaName
-                || setting.SourceTableName != column.TableName
-                || setting.SourceColumnName != column.ColumnName)
-            .Concat(settings)
+            .Where(setting => !IsSourceColumn(setting, column))
+            .Where(setting => !currentColumnSettings.Any(current => IsSameRelation(setting, CreateReverseSetting(current))))
+            .Concat(replacementSettings)
+            .DistinctBy(CreateRelationKey)
             .ToList();
 
         await _foreignKeyRelationRepository.SaveAllAsync(_foreignKeySettings);
@@ -369,6 +377,59 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private static string CreateTableKey(DbTableInfo table)
     {
         return $"{table.SchemaName}.{table.TableName}";
+    }
+
+    /// <summary>
+    /// 外部キー設定の参照元が指定カラムかどうかを判定します。
+    /// </summary>
+    private static bool IsSourceColumn(
+        ForeignKeyRelationSetting setting,
+        DbColumnInfo column)
+    {
+        return setting.SourceSchemaName == column.SchemaName
+            && setting.SourceTableName == column.TableName
+            && setting.SourceColumnName == column.ColumnName;
+    }
+
+    /// <summary>
+    /// 外部キー設定の向きを反転した設定を作成します。
+    /// </summary>
+    private static ForeignKeyRelationSetting CreateReverseSetting(ForeignKeyRelationSetting setting)
+    {
+        return new ForeignKeyRelationSetting
+        {
+            SourceSchemaName = setting.ReferenceSchemaName,
+            SourceTableName = setting.ReferenceTableName,
+            SourceColumnName = setting.ReferenceColumnName,
+            ReferenceSchemaName = setting.SourceSchemaName,
+            ReferenceTableName = setting.SourceTableName,
+            ReferenceColumnName = setting.SourceColumnName
+        };
+    }
+
+    /// <summary>
+    /// 2つの外部キー設定が同じ向きの同じ関係かどうかを判定します。
+    /// </summary>
+    private static bool IsSameRelation(
+        ForeignKeyRelationSetting left,
+        ForeignKeyRelationSetting right)
+    {
+        return CreateRelationKey(left) == CreateRelationKey(right);
+    }
+
+    /// <summary>
+    /// 外部キー設定の重複判定に使うキーを作成します。
+    /// </summary>
+    private static string CreateRelationKey(ForeignKeyRelationSetting setting)
+    {
+        return string.Join(
+            "|",
+            setting.SourceSchemaName,
+            setting.SourceTableName,
+            setting.SourceColumnName,
+            setting.ReferenceSchemaName,
+            setting.ReferenceTableName,
+            setting.ReferenceColumnName);
     }
 
     /// <summary>

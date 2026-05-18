@@ -160,6 +160,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
             .DistinctBy(CreateRelationKey)
             .ToList();
 
+        await ApplySampleDataKindToReferenceColumns(columnItem, settings);
         await _foreignKeyRelationRepository.SaveAllAsync(_foreignKeySettings);
         RefreshForeignKeyDisplay(columnItem);
         ColumnsSource.ResetBindings();
@@ -377,6 +378,77 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private static string CreateTableKey(DbTableInfo table)
     {
         return $"{table.SchemaName}.{table.TableName}";
+    }
+
+    /// <summary>
+    /// テーブル単位のカラム設定キャッシュに使うキーを作成します。
+    /// </summary>
+    private static string CreateTableKey(string schemaName, string tableName)
+    {
+        return $"{schemaName}.{tableName}";
+    }
+
+    /// <summary>
+    /// 操作中カラムの種類設定を、今回追加された外部キー参照先カラムへ反映します。
+    /// </summary>
+    private async Task ApplySampleDataKindToReferenceColumns(
+        DbColumnSampleDataSelectionItem columnItem,
+        IReadOnlyList<ForeignKeyRelationSetting> settings)
+    {
+        if (_connection == null || string.IsNullOrWhiteSpace(columnItem.SampleDataKind))
+        {
+            return;
+        }
+
+        foreach (var setting in settings)
+        {
+            var referenceColumns = await GetOrLoadColumnsSource(
+                setting.ReferenceSchemaName,
+                setting.ReferenceTableName);
+            var referenceColumn = referenceColumns.FirstOrDefault(column =>
+                column.Column.SchemaName == setting.ReferenceSchemaName
+                && column.Column.TableName == setting.ReferenceTableName
+                && column.Column.ColumnName == setting.ReferenceColumnName);
+
+            if (referenceColumn == null)
+            {
+                continue;
+            }
+
+            referenceColumn.SampleDataKind = columnItem.SampleDataKind;
+        }
+    }
+
+    /// <summary>
+    /// 指定テーブルのカラム設定をキャッシュから取得し、未読込ならDBスキーマから読み込みます。
+    /// </summary>
+    private async Task<BindingList<DbColumnSampleDataSelectionItem>> GetOrLoadColumnsSource(
+        string schemaName,
+        string tableName)
+    {
+        if (_connection == null)
+        {
+            throw new InvalidOperationException("DB接続情報が初期化されていません。");
+        }
+
+        var key = CreateTableKey(schemaName, tableName);
+        if (_columnsByTable.TryGetValue(key, out var columnsSource))
+        {
+            return columnsSource;
+        }
+
+        var table = new DbTableInfo
+        {
+            SchemaName = schemaName,
+            TableName = tableName
+        };
+        var columns = await _dbTableSchemaRepository.GetColumnsAsync(_connection, table);
+        columnsSource = new BindingList<DbColumnSampleDataSelectionItem>(
+            columns.Select(column => new DbColumnSampleDataSelectionItem(column)).ToList());
+
+        _columnsByTable.Add(key, columnsSource);
+
+        return columnsSource;
     }
 
     /// <summary>

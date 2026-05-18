@@ -159,6 +159,57 @@ public sealed class ConnectionOperationViewModelTests
     }
 
     [TestMethod]
+    public async Task SaveForeignKeySettingsは操作中カラムの種類を参照先カラムにも反映する()
+    {
+        // Arrange
+        var fixture = CreateFixture();
+        var connection = CreateConnection();
+        var usersTable = CreateTable("PLMCONSOLE", "USERS");
+        var clinicsTable = CreateTable("PLMCONSOLE", "CLINICS");
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(connection, usersTable, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                CreateColumn(usersTable, "CLINIC_ID", "NUMBER", 1)
+            });
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(
+                connection,
+                It.Is<DbTableInfo>(table =>
+                    table.SchemaName == clinicsTable.SchemaName
+                    && table.TableName == clinicsTable.TableName),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                CreateColumn(clinicsTable, "CLINIC_ID", "NUMBER", 1)
+            });
+
+        await fixture.ViewModel.Initialize(connection);
+        await fixture.ViewModel.LoadColumns(new DbTableSelectionItem(usersTable));
+        var columnItem = fixture.ViewModel.ColumnsSource[0];
+        columnItem.SampleDataKind = "病院ID";
+        var settings = new[]
+        {
+            new ForeignKeyRelationSetting
+            {
+                SourceSchemaName = "PLMCONSOLE",
+                SourceTableName = "USERS",
+                SourceColumnName = "CLINIC_ID",
+                ReferenceSchemaName = "PLMCONSOLE",
+                ReferenceTableName = "CLINICS",
+                ReferenceColumnName = "CLINIC_ID"
+            }
+        };
+
+        // Act
+        await fixture.ViewModel.SaveForeignKeySettings(columnItem, settings);
+        await fixture.ViewModel.LoadColumns(new DbTableSelectionItem(clinicsTable));
+
+        // Assert
+        fixture.ViewModel.ColumnsSource[0].SampleDataKind.Is("病院ID");
+    }
+
+    [TestMethod]
     public async Task SaveForeignKeySettingsは解除時に双方向の外部キー設定を削除する()
     {
         // Arrange

@@ -293,19 +293,15 @@ public partial class ConnectionOperationView : Form
             dgvTables.EndEdit();
             ColumnsDataGridView.EndEdit();
 
-            var result = await _vm.CreateTestData(GetCreateCount());
+            var result = await _vm.CreateTestData(GetCreateCount(), DirectCheckBox.Checked);
 
             MessageBox.Show(
-                $"テストデータを作成しました。\r\n\r\n保存先: {result.OutputDirectoryPath}",
+                CreateCompletedMessage("テストデータを作成しました。", result),
                 "作成完了",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = result.OutputDirectoryPath,
-                UseShellExecute = true
-            });
+            OpenOutputDirectoryIfExists(result);
         }
         catch (Exception ex)
         {
@@ -318,6 +314,38 @@ public partial class ConnectionOperationView : Form
     }
 
     /// <summary>
+    /// 出力先フォルダが存在する場合だけエクスプローラーで開きます。
+    /// </summary>
+    private static void OpenOutputDirectoryIfExists(TestDataOutputResult result)
+    {
+        if (!Directory.Exists(result.OutputDirectoryPath))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = result.OutputDirectoryPath,
+            UseShellExecute = true
+        });
+    }
+
+    /// <summary>
+    /// ファイル出力とDB直接登録の結果に応じて完了メッセージを作成します。
+    /// </summary>
+    private static string CreateCompletedMessage(
+        string title,
+        TestDataOutputResult result)
+    {
+        if (Directory.Exists(result.OutputDirectoryPath))
+        {
+            return $"{title}\r\n\r\n保存先: {result.OutputDirectoryPath}";
+        }
+
+        return $"{title}\r\n\r\n{result.OutputDirectoryPath}";
+    }
+
+    /// <summary>
     /// 選択テーブルに対して境界値テストデータを作成します。
     /// </summary>
     private async Task Create2ButtonClick()
@@ -327,19 +355,15 @@ public partial class ConnectionOperationView : Form
             dgvTables.EndEdit();
             ColumnsDataGridView.EndEdit();
 
-            var result = await _vm.CreateBoundaryTestData();
+            var result = await _vm.CreateBoundaryTestData(DirectCheckBox.Checked);
 
             MessageBox.Show(
-                $"種類別テストデータを作成しました。\r\n\r\n保存先: {result.OutputDirectoryPath}",
+                CreateCompletedMessage("種類別テストデータを作成しました。", result),
                 "作成完了",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = result.OutputDirectoryPath,
-                UseShellExecute = true
-            });
+            OpenOutputDirectoryIfExists(result);
         }
         catch (Exception ex)
         {

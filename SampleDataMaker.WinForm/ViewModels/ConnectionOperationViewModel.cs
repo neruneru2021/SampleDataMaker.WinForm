@@ -16,6 +16,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private readonly ITestDataGenerator _testDataGenerator;
     private readonly IBoundaryTestDataGenerator _boundaryTestDataGenerator;
     private readonly ITestDataOutputRepository _testDataOutputRepository;
+    private readonly ITestDataDirectInsertRepository _testDataDirectInsertRepository;
     private readonly ISampleDataRepository _sampleDataRepository;
     private readonly IColumnSampleDataTemplateRepository _templateRepository;
     private readonly IForeignKeyRelationRepository _foreignKeyRelationRepository;
@@ -70,6 +71,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
         ITestDataGenerator testDataGenerator,
         IBoundaryTestDataGenerator boundaryTestDataGenerator,
         ITestDataOutputRepository testDataOutputRepository,
+        ITestDataDirectInsertRepository testDataDirectInsertRepository,
         ISampleDataRepository sampleDataRepository,
         IColumnSampleDataTemplateRepository templateRepository,
         IForeignKeyRelationRepository foreignKeyRelationRepository,
@@ -80,6 +82,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
         _testDataGenerator = testDataGenerator;
         _boundaryTestDataGenerator = boundaryTestDataGenerator;
         _testDataOutputRepository = testDataOutputRepository;
+        _testDataDirectInsertRepository = testDataDirectInsertRepository;
         _sampleDataRepository = sampleDataRepository;
         _templateRepository = templateRepository;
         _foreignKeyRelationRepository = foreignKeyRelationRepository;
@@ -277,7 +280,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
     /// <summary>
     /// 選択されたテーブルに対して指定件数の通常テストデータを生成します。
     /// </summary>
-    public async Task<TestDataOutputResult> CreateTestData(int rowCount)
+    public async Task<TestDataOutputResult> CreateTestData(int rowCount, bool directInsert = false)
     {
         if (_connection == null)
         {
@@ -306,13 +309,15 @@ internal class ConnectionOperationViewModel : ViewModelBase
 
         var appliedTestDataList = _foreignKeyTestDataApplier.Apply(testDataList, _foreignKeySettings);
 
-        return await _testDataOutputRepository.SaveAsync(appliedTestDataList);
+        return directInsert
+            ? await _testDataDirectInsertRepository.SaveAsync(_connection, appliedTestDataList)
+            : await _testDataOutputRepository.SaveAsync(appliedTestDataList);
     }
 
     /// <summary>
     /// 選択されたテーブルに対して境界値テストデータを生成します。
     /// </summary>
-    public async Task<TestDataOutputResult> CreateBoundaryTestData()
+    public async Task<TestDataOutputResult> CreateBoundaryTestData(bool directInsert = false)
     {
         if (_connection == null)
         {
@@ -335,7 +340,9 @@ internal class ConnectionOperationViewModel : ViewModelBase
 
         var appliedTestDataList = _foreignKeyTestDataApplier.Apply(testDataList, _foreignKeySettings);
 
-        return await _testDataOutputRepository.SaveAsync(appliedTestDataList);
+        return directInsert
+            ? await _testDataDirectInsertRepository.SaveAsync(_connection, appliedTestDataList)
+            : await _testDataOutputRepository.SaveAsync(appliedTestDataList);
     }
 
     /// <summary>

@@ -41,6 +41,7 @@
             TemplateButton = new Button();
             Create2Button = new Button();
             CreateButton = new Button();
+            DirectCheckBox = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
             splitContainer.Panel1.SuspendLayout();
             splitContainer.Panel2.SuspendLayout();
@@ -71,6 +72,7 @@
             // 
             // splitContainer.Panel2
             // 
+            splitContainer.Panel2.Controls.Add(DirectCheckBox);
             splitContainer.Panel2.Controls.Add(label1);
             splitContainer.Panel2.Controls.Add(CreateCountTextBox);
             splitContainer.Panel2.Controls.Add(TemplateNameTextBox);
@@ -161,7 +163,7 @@
             // 
             label1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             label1.AutoSize = true;
-            label1.Location = new Point(694, 24);
+            label1.Location = new Point(618, 24);
             label1.Name = "label1";
             label1.Size = new Size(69, 18);
             label1.TabIndex = 7;
@@ -170,7 +172,7 @@
             // CreateCountTextBox
             // 
             CreateCountTextBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            CreateCountTextBox.Location = new Point(769, 21);
+            CreateCountTextBox.Location = new Point(693, 21);
             CreateCountTextBox.Name = "CreateCountTextBox";
             CreateCountTextBox.Size = new Size(74, 25);
             CreateCountTextBox.TabIndex = 6;
@@ -180,7 +182,7 @@
             TemplateNameTextBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             TemplateNameTextBox.Location = new Point(12, 5);
             TemplateNameTextBox.Name = "TemplateNameTextBox";
-            TemplateNameTextBox.Size = new Size(464, 25);
+            TemplateNameTextBox.Size = new Size(388, 25);
             TemplateNameTextBox.TabIndex = 5;
             // 
             // TemplateComboBox
@@ -189,13 +191,13 @@
             TemplateComboBox.FormattingEnabled = true;
             TemplateComboBox.Location = new Point(12, 34);
             TemplateComboBox.Name = "TemplateComboBox";
-            TemplateComboBox.Size = new Size(464, 26);
+            TemplateComboBox.Size = new Size(388, 26);
             TemplateComboBox.TabIndex = 4;
             // 
             // TemplateButton
             // 
             TemplateButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            TemplateButton.Location = new Point(482, 13);
+            TemplateButton.Location = new Point(406, 13);
             TemplateButton.Name = "TemplateButton";
             TemplateButton.Size = new Size(120, 40);
             TemplateButton.TabIndex = 3;
@@ -205,7 +207,7 @@
             // Create2Button
             // 
             Create2Button.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            Create2Button.Location = new Point(608, 13);
+            Create2Button.Location = new Point(532, 13);
             Create2Button.Name = "Create2Button";
             Create2Button.Size = new Size(80, 40);
             Create2Button.TabIndex = 2;
@@ -221,6 +223,16 @@
             CreateButton.TabIndex = 1;
             CreateButton.Text = "作成";
             CreateButton.UseVisualStyleBackColor = true;
+            // 
+            // DirectCheckBox
+            // 
+            DirectCheckBox.AutoSize = true;
+            DirectCheckBox.Location = new Point(781, 23);
+            DirectCheckBox.Name = "DirectCheckBox";
+            DirectCheckBox.Size = new Size(62, 22);
+            DirectCheckBox.TabIndex = 8;
+            DirectCheckBox.Text = "Direct";
+            DirectCheckBox.UseVisualStyleBackColor = true;
             // 
             // ConnectionOperationView
             // 
@@ -267,5 +279,6 @@
         private Label label1;
         private SplitContainer OverBaseSplitContainer;
         private DataGridView SelectTableDataGridView;
+        private CheckBox DirectCheckBox;
     }
 }

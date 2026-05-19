@@ -83,10 +83,10 @@ internal interface ITestValueFactory
 internal class SimpleTestValueFactory : ITestValueFactory
 {
     private readonly Func<DateTimeOffset> _now;
-    private int _textValueNumber;
-    private int _integerValueNumber;
-    private int _decimalValueNumber;
-    private int _binaryValueNumber;
+    private readonly Dictionary<string, int> _textValueNumbers = new();
+    private readonly Dictionary<string, int> _integerValueNumbers = new();
+    private readonly Dictionary<string, int> _decimalValueNumbers = new();
+    private readonly Dictionary<string, int> _binaryValueNumbers = new();
     private string _dateValue = string.Empty;
 
     private static readonly HashSet<string> TextTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -172,10 +172,10 @@ internal class SimpleTestValueFactory : ITestValueFactory
 
     public void StartGeneration()
     {
-        _textValueNumber = 0;
-        _integerValueNumber = 0;
-        _decimalValueNumber = 0;
-        _binaryValueNumber = 0;
+        _textValueNumbers.Clear();
+        _integerValueNumbers.Clear();
+        _decimalValueNumbers.Clear();
+        _binaryValueNumbers.Clear();
         _dateValue = _now().ToString("yyyy-MM-dd HH:mm:ss");
     }
 
@@ -185,14 +185,14 @@ internal class SimpleTestValueFactory : ITestValueFactory
 
         if (TextTypes.Contains(dataType))
         {
-            return CreateText(column, dataType, ++_textValueNumber);
+            return CreateText(column, dataType, NextValue(_textValueNumbers, column, GetTextMaximum(column, dataType)));
         }
 
         if (NumberTypes.Contains(dataType))
         {
             return DecimalNumberTypes.Contains(dataType)
-                ? CreateDecimal(column, ++_decimalValueNumber)
-                : (++_integerValueNumber).ToString();
+                ? CreateDecimal(column, NextValue(_decimalValueNumbers, column, GetDecimalIntegerPartMaximum(column)))
+                : NextValue(_integerValueNumbers, column, GetIntegerMaximum(dataType)).ToString();
         }
 
         if (DateTypes.Contains(dataType))
@@ -202,10 +202,31 @@ internal class SimpleTestValueFactory : ITestValueFactory
 
         if (IsBinary(dataType))
         {
-            return $"0x{++_binaryValueNumber:X2}";
+            return $"0x{NextValue(_binaryValueNumbers, column, GetBinaryMaximum(column, dataType)):X2}";
         }
 
         return string.Empty;
+    }
+
+    private static int NextValue(
+        Dictionary<string, int> valueNumbers,
+        DbColumnInfo column,
+        int maximum)
+    {
+        var key = CreateColumnKey(column);
+        var current = valueNumbers.TryGetValue(key, out var value)
+            ? value
+            : 0;
+        var next = current + 1;
+
+        if (next > maximum)
+        {
+            next = 1;
+        }
+
+        valueNumbers[key] = next;
+
+        return next;
     }
 
     private static string CreateText(DbColumnInfo column, string dataType, int valueNumber)
@@ -244,6 +265,67 @@ internal class SimpleTestValueFactory : ITestValueFactory
         return $"{valueNumber}.{new string('0', scale - 1)}1";
     }
 
+    private static int GetIntegerMaximum(string dataType)
+    {
+        return dataType.ToLowerInvariant() switch
+        {
+            "bit" => 1,
+            "tinyint" => byte.MaxValue,
+            "smallint" => short.MaxValue,
+            _ => int.MaxValue
+        };
+    }
+
+    private static int GetDecimalIntegerPartMaximum(DbColumnInfo column)
+    {
+        var precision = column.NumericPrecision;
+        if (precision == null)
+        {
+            return int.MaxValue;
+        }
+
+        var scale = column.NumericScale.GetValueOrDefault(0);
+        var integerDigits = Math.Max(1, precision.Value - scale);
+
+        return CreateMaximumByDigits(integerDigits);
+    }
+
+    private static int GetTextMaximum(DbColumnInfo column, string dataType)
+    {
+        var maxLength = GetEffectiveTextLength(column, dataType);
+
+        return maxLength == null || maxLength <= 0
+            ? int.MaxValue
+            : CreateMaximumByDigits(maxLength.Value);
+    }
+
+    private static int GetBinaryMaximum(DbColumnInfo column, string dataType)
+    {
+        var length = TryParseLength(column.DataType) ?? column.MaxLength;
+
+        if (length == null || length <= 0)
+        {
+            return int.MaxValue;
+        }
+
+        return CreateMaximumByDigits(length.Value * 2);
+    }
+
+    private static int CreateMaximumByDigits(int digits)
+    {
+        if (digits <= 0)
+        {
+            return 1;
+        }
+
+        if (digits >= 10)
+        {
+            return int.MaxValue;
+        }
+
+        return (int)Math.Pow(10, digits) - 1;
+    }
+
     private static string? CreateLengthText(DbColumnInfo column, string dataType)
     {
         var parsedLength = TryParseLength(column.DataType);
@@ -270,20 +352,33 @@ internal class SimpleTestValueFactory : ITestValueFactory
 
     private static bool FitsTextLength(string value, DbColumnInfo column, string dataType)
     {
-        var maxLength = TryParseLength(column.DataType) ?? column.MaxLength;
+        var maxLength = GetEffectiveTextLength(column, dataType);
 
         if (maxLength is null || maxLength <= 0)
         {
             return true;
         }
 
+        return value.Length <= maxLength;
+    }
+
+    private static int? GetEffectiveTextLength(DbColumnInfo column, string dataType)
+    {
+        var parsedLength = TryParseLength(column.DataType);
+        var maxLength = parsedLength ?? column.MaxLength;
+
+        if (maxLength is null || maxLength <= 0)
+        {
+            return maxLength;
+        }
+
         if (dataType.StartsWith("n", StringComparison.OrdinalIgnoreCase)
-            && TryParseLength(column.DataType) is null)
+            && parsedLength is null)
         {
             maxLength = Math.Max(1, maxLength.Value / 2);
         }
 
-        return value.Length <= maxLength;
+        return maxLength;
     }
 
     private static int? TryParseLength(string dataType)
@@ -321,5 +416,10 @@ internal class SimpleTestValueFactory : ITestValueFactory
         return parenthesisIndex < 0
             ? normalized
             : normalized[..parenthesisIndex].Trim();
+    }
+
+    private static string CreateColumnKey(DbColumnInfo column)
+    {
+        return $"{column.SchemaName}.{column.TableName}.{column.ColumnName}";
     }
 }

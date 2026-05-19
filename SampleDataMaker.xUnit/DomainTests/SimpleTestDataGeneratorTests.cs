@@ -107,13 +107,13 @@ public sealed class SimpleTestDataGeneratorTests
 
         // Assert
         result.Rows[0]["FixedFull"].Is("1-Fixed-VARCHAR(100)");
-        result.Rows[0]["FixedShort"].Is("2-Fixed(12)");
-        result.Rows[0]["FixedVeryShort"].Is("3-Fixed");
-        result.Rows[0]["FixedMinimum"].Is("4");
-        result.Rows[0]["AdjustableFull"].Is("5-Adjustable-NVARCHAR(100)");
-        result.Rows[0]["AdjustableShort"].Is("6-Adjustable 15");
-        result.Rows[0]["AdjustableVeryShort"].Is("7-Adjustable");
-        result.Rows[0]["AdjustableMinimum"].Is("8");
+        result.Rows[0]["FixedShort"].Is("1-Fixed(12)");
+        result.Rows[0]["FixedVeryShort"].Is("1-Fixed");
+        result.Rows[0]["FixedMinimum"].Is("1");
+        result.Rows[0]["AdjustableFull"].Is("1-Adjustable-NVARCHAR(100)");
+        result.Rows[0]["AdjustableShort"].Is("1-Adjustable 15");
+        result.Rows[0]["AdjustableVeryShort"].Is("1-Adjustable");
+        result.Rows[0]["AdjustableMinimum"].Is("1");
     }
 
     [TestMethod]
@@ -136,9 +136,55 @@ public sealed class SimpleTestDataGeneratorTests
 
         // Assert
         result.Rows[0]["Price1"].Is("1.001");
-        result.Rows[0]["Price2"].Is("2.001");
+        result.Rows[0]["Price2"].Is("1.001");
         result.Rows[0]["Image1"].Is("0x01");
-        result.Rows[0]["Image2"].Is("0x02");
+        result.Rows[0]["Image2"].Is("0x01");
+    }
+
+    [TestMethod]
+    public void 整数型は型の上限を超えたら1から振り直す()
+    {
+        // Arrange
+        // tinyintはSQL Serverでは0〜255の範囲です。
+        // このツールの通常生成は1から始めるため、256行目は1へ折り返す必要があります。
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Products");
+        var columns = new[]
+        {
+            CreateColumn("Ktype", "tinyint", ordinalPosition: 1)
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, rowCount: 256);
+
+        // Assert
+        result.Rows[0]["Ktype"].Is("1");
+        result.Rows[254]["Ktype"].Is("255");
+        result.Rows[255]["Ktype"].Is("1");
+    }
+
+    [TestMethod]
+    public void 文字列型は桁数を超える前に1から振り直す()
+    {
+        // Arrange
+        // nchar(1)のような1文字カラムでは、10という値は2文字になるため入れられません。
+        // そのため9の次は1へ折り返します。
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Products");
+        var columns = new[]
+        {
+            CreateColumn("ProductName", "nchar", ordinalPosition: 1, maxLength: 2)
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, rowCount: 10);
+
+        // Assert
+        result.Rows[0]["ProductName"].Is("1");
+        result.Rows[8]["ProductName"].Is("9");
+        result.Rows[9]["ProductName"].Is("1");
     }
 
     private static DbTableInfo CreateTable(string schemaName, string tableName)

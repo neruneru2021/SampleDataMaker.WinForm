@@ -277,6 +277,94 @@ public sealed class ConnectionOperationViewModelTests
             Times.Once);
     }
 
+    [TestMethod]
+    public async Task CreateTestDataはDirect指定なしの場合ファイル出力Repositoryへ保存する()
+    {
+        // Arrange
+        var fixture = CreateFixture();
+        var connection = CreateConnection();
+        var table = CreateTable("PLMCONSOLE", "USERS");
+        fixture.TableInfoRepositoryMock
+            .Setup(x => x.GetTablesAsync(connection, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { table });
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(connection, table, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { CreateColumn(table, "USER_ID", "NUMBER", 1) });
+
+        var generatedData = new GeneratedTestData(
+            table,
+            new[] { CreateColumn(table, "USER_ID", "NUMBER", 1) },
+            new[] { Row(("USER_ID", "1")) });
+        fixture.TestDataGeneratorMock
+            .Setup(x => x.Generate(table, It.IsAny<IReadOnlyList<DbColumnInfo>>(), It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(), 1))
+            .Returns(generatedData);
+        fixture.ForeignKeyTestDataApplierMock
+            .Setup(x => x.Apply(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>()))
+            .Returns((IReadOnlyList<GeneratedTestData> testDataList, IReadOnlyList<ForeignKeyRelationSetting> _) => testDataList);
+        fixture.OutputRepositoryMock
+            .Setup(x => x.SaveAsync(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDataOutputResult("file-output", Array.Empty<string>()));
+
+        await fixture.ViewModel.Initialize(connection);
+        fixture.ViewModel.TablesSource[0].IsSelected = true;
+
+        // Act
+        var result = await fixture.ViewModel.CreateTestData(rowCount: 1, directInsert: false);
+
+        // Assert
+        result.OutputDirectoryPath.Is("file-output");
+        fixture.OutputRepositoryMock.Verify(
+            x => x.SaveAsync(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        fixture.DirectInsertRepositoryMock.Verify(
+            x => x.SaveAsync(It.IsAny<DbConnectionInfo>(), It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [TestMethod]
+    public async Task CreateTestDataはDirect指定ありの場合DB直接登録Repositoryへ保存する()
+    {
+        // Arrange
+        var fixture = CreateFixture();
+        var connection = CreateConnection();
+        var table = CreateTable("PLMCONSOLE", "USERS");
+        fixture.TableInfoRepositoryMock
+            .Setup(x => x.GetTablesAsync(connection, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { table });
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(connection, table, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { CreateColumn(table, "USER_ID", "NUMBER", 1) });
+
+        var generatedData = new GeneratedTestData(
+            table,
+            new[] { CreateColumn(table, "USER_ID", "NUMBER", 1) },
+            new[] { Row(("USER_ID", "1")) });
+        fixture.TestDataGeneratorMock
+            .Setup(x => x.Generate(table, It.IsAny<IReadOnlyList<DbColumnInfo>>(), It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(), 1))
+            .Returns(generatedData);
+        fixture.ForeignKeyTestDataApplierMock
+            .Setup(x => x.Apply(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>()))
+            .Returns((IReadOnlyList<GeneratedTestData> testDataList, IReadOnlyList<ForeignKeyRelationSetting> _) => testDataList);
+        fixture.DirectInsertRepositoryMock
+            .Setup(x => x.SaveAsync(connection, It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDataOutputResult("direct-output", Array.Empty<string>()));
+
+        await fixture.ViewModel.Initialize(connection);
+        fixture.ViewModel.TablesSource[0].IsSelected = true;
+
+        // Act
+        var result = await fixture.ViewModel.CreateTestData(rowCount: 1, directInsert: true);
+
+        // Assert
+        result.OutputDirectoryPath.Is("direct-output");
+        fixture.DirectInsertRepositoryMock.Verify(
+            x => x.SaveAsync(connection, It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        fixture.OutputRepositoryMock.Verify(
+            x => x.SaveAsync(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static TestFixture CreateFixture()
     {
         var tableInfoRepositoryMock = new Mock<IDbTableInfoRepository>();
@@ -284,6 +372,7 @@ public sealed class ConnectionOperationViewModelTests
         var testDataGeneratorMock = new Mock<ITestDataGenerator>();
         var boundaryTestDataGeneratorMock = new Mock<IBoundaryTestDataGenerator>();
         var outputRepositoryMock = new Mock<ITestDataOutputRepository>();
+        var directInsertRepositoryMock = new Mock<ITestDataDirectInsertRepository>();
         var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
         var templateRepositoryMock = new Mock<IColumnSampleDataTemplateRepository>();
         var foreignKeyRelationRepositoryMock = new Mock<IForeignKeyRelationRepository>();
@@ -311,6 +400,7 @@ public sealed class ConnectionOperationViewModelTests
             testDataGeneratorMock.Object,
             boundaryTestDataGeneratorMock.Object,
             outputRepositoryMock.Object,
+            directInsertRepositoryMock.Object,
             sampleDataRepositoryMock.Object,
             templateRepositoryMock.Object,
             foreignKeyRelationRepositoryMock.Object,
@@ -320,8 +410,12 @@ public sealed class ConnectionOperationViewModelTests
             vm,
             tableInfoRepositoryMock,
             tableSchemaRepositoryMock,
+            testDataGeneratorMock,
+            outputRepositoryMock,
+            directInsertRepositoryMock,
             sampleDataRepositoryMock,
-            foreignKeyRelationRepositoryMock);
+            foreignKeyRelationRepositoryMock,
+            foreignKeyTestDataApplierMock);
     }
 
     private static DbConnectionInfo CreateConnection()
@@ -360,10 +454,19 @@ public sealed class ConnectionOperationViewModelTests
         };
     }
 
+    private static IReadOnlyDictionary<string, string?> Row(params (string ColumnName, string? Value)[] values)
+    {
+        return values.ToDictionary(x => x.ColumnName, x => x.Value);
+    }
+
     private sealed record TestFixture(
         ConnectionOperationViewModel ViewModel,
         Mock<IDbTableInfoRepository> TableInfoRepositoryMock,
         Mock<IDbTableSchemaRepository> TableSchemaRepositoryMock,
+        Mock<ITestDataGenerator> TestDataGeneratorMock,
+        Mock<ITestDataOutputRepository> OutputRepositoryMock,
+        Mock<ITestDataDirectInsertRepository> DirectInsertRepositoryMock,
         Mock<ISampleDataRepository> SampleDataRepositoryMock,
-        Mock<IForeignKeyRelationRepository> ForeignKeyRelationRepositoryMock);
+        Mock<IForeignKeyRelationRepository> ForeignKeyRelationRepositoryMock,
+        Mock<IForeignKeyTestDataApplier> ForeignKeyTestDataApplierMock);
 }

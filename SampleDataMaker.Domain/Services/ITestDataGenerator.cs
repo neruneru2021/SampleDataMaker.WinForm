@@ -14,10 +14,12 @@ public interface ITestDataGenerator
     /// <param name="columns">生成対象のカラム一覧。</param>
     /// <param name="sampleDataSettings">カラムごとに選択されたサンプルデータ設定。</param>
     /// <param name="rowCount">生成する行数。</param>
+    /// <param name="columnStartNumbers">既存データに続けて採番するための、カラムごとの開始番号。</param>
     /// <returns>生成された通常テストデータ。</returns>
     GeneratedTestData Generate(
         DbTableInfo table,
         IReadOnlyList<DbColumnInfo> columns,
         IReadOnlyList<ColumnSampleDataSetting>? sampleDataSettings = null,
-        int rowCount = 1);
+        int rowCount = 1,
+        IReadOnlyDictionary<string, int>? columnStartNumbers = null);
 }

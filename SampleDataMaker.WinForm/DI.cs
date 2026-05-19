@@ -33,6 +33,7 @@ namespace SampleDataMaker.WinForm
             _services.AddTransient<IBoundaryTestDataGenerator, BoundaryTestDataGenerator>();
             _services.AddTransient<ITestDataOutputRepository, LocalTestDataOutputRepository>();
             _services.AddTransient<ITestDataDirectInsertRepository, DbTestDataDirectInsertRepository>();
+            _services.AddTransient<IExistingKeyValueRepository, DbExistingKeyValueRepository>();
             _services.AddSingleton<ISampleDataRepository, JsonSampleDataRepository>();
             _services.AddTransient<IColumnSampleDataTemplateRepository, JsonColumnSampleDataTemplateRepository>();
             _services.AddSingleton<IForeignKeyRelationRepository, JsonForeignKeyRelationRepository>();

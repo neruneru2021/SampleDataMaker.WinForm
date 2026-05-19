@@ -165,6 +165,67 @@ public sealed class SimpleTestDataGeneratorTests
     }
 
     [TestMethod]
+    public void 開始番号が指定された数値カラムは既存最大値の次から値を作成する()
+    {
+        // Arrange
+        // 直接INSERTで既存データへ追加する時は、DB上の最大値を開始番号として渡します。
+        // ここでは既に100まで入っている想定なので、次に作る値は101から始まります。
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Users");
+        var columns = new[]
+        {
+            CreateColumn("UserId", "int", ordinalPosition: 1)
+        };
+        var startNumbers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["dbo.Users.UserId"] = 100
+        };
+
+        // Act
+        var result = generator.Generate(
+            table,
+            columns,
+            rowCount: 2,
+            columnStartNumbers: startNumbers);
+
+        // Assert
+        result.Rows[0]["UserId"].Is("101");
+        result.Rows[1]["UserId"].Is("102");
+    }
+
+    [TestMethod]
+    public void 開始番号が指定された数値カラムは型の上限を超える場合に例外を出す()
+    {
+        // Arrange
+        // tinyintは255が上限です。
+        // 既存最大値が255の場合、1へ折り返すと既存キーと衝突する可能性が高いため、
+        // 追加作成モードでは自動折り返しではなく、理由が分かる例外にします。
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new SimpleTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Users");
+        var columns = new[]
+        {
+            CreateColumn("Ktype", "tinyint", ordinalPosition: 1)
+        };
+        var startNumbers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["dbo.Users.Ktype"] = 255
+        };
+
+        // Act
+        var action = () => generator.Generate(
+            table,
+            columns,
+            rowCount: 1,
+            columnStartNumbers: startNumbers);
+
+        // Assert
+        var exception = Assert.ThrowsException<InvalidOperationException>(action);
+        exception.Message.Contains("キー重複を避けて追加作成できません").IsTrue();
+    }
+
+    [TestMethod]
     public void 文字列型は桁数を超える前に1から振り直す()
     {
         // Arrange

@@ -34,6 +34,7 @@
             dgvTables = new DataGridView();
             ColumnsDataGridView = new DataGridView();
             SelectTableDataGridView = new DataGridView();
+            DirectCheckBox = new CheckBox();
             label1 = new Label();
             CreateCountTextBox = new TextBox();
             TemplateNameTextBox = new TextBox();
@@ -41,7 +42,6 @@
             TemplateButton = new Button();
             Create2Button = new Button();
             CreateButton = new Button();
-            DirectCheckBox = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
             splitContainer.Panel1.SuspendLayout();
             splitContainer.Panel2.SuspendLayout();
@@ -159,6 +159,17 @@
             SelectTableDataGridView.Size = new Size(941, 125);
             SelectTableDataGridView.TabIndex = 0;
             // 
+            // DirectCheckBox
+            // 
+            DirectCheckBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            DirectCheckBox.AutoSize = true;
+            DirectCheckBox.Location = new Point(781, 23);
+            DirectCheckBox.Name = "DirectCheckBox";
+            DirectCheckBox.Size = new Size(62, 22);
+            DirectCheckBox.TabIndex = 8;
+            DirectCheckBox.Text = "Direct";
+            DirectCheckBox.UseVisualStyleBackColor = true;
+            // 
             // label1
             // 
             label1.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
@@ -223,16 +234,6 @@
             CreateButton.TabIndex = 1;
             CreateButton.Text = "作成";
             CreateButton.UseVisualStyleBackColor = true;
-            // 
-            // DirectCheckBox
-            // 
-            DirectCheckBox.AutoSize = true;
-            DirectCheckBox.Location = new Point(781, 23);
-            DirectCheckBox.Name = "DirectCheckBox";
-            DirectCheckBox.Size = new Size(62, 22);
-            DirectCheckBox.TabIndex = 8;
-            DirectCheckBox.Text = "Direct";
-            DirectCheckBox.UseVisualStyleBackColor = true;
             // 
             // ConnectionOperationView
             // 

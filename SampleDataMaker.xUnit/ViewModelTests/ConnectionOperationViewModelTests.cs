@@ -296,7 +296,12 @@ public sealed class ConnectionOperationViewModelTests
             new[] { CreateColumn(table, "USER_ID", "NUMBER", 1) },
             new[] { Row(("USER_ID", "1")) });
         fixture.TestDataGeneratorMock
-            .Setup(x => x.Generate(table, It.IsAny<IReadOnlyList<DbColumnInfo>>(), It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(), 1))
+            .Setup(x => x.Generate(
+                table,
+                It.IsAny<IReadOnlyList<DbColumnInfo>>(),
+                It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(),
+                1,
+                It.IsAny<IReadOnlyDictionary<string, int>>()))
             .Returns(generatedData);
         fixture.ForeignKeyTestDataApplierMock
             .Setup(x => x.Apply(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>()))
@@ -319,6 +324,13 @@ public sealed class ConnectionOperationViewModelTests
         fixture.DirectInsertRepositoryMock.Verify(
             x => x.SaveAsync(It.IsAny<DbConnectionInfo>(), It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        fixture.ExistingKeyValueRepositoryMock.Verify(
+            x => x.GetMaxValuesAsync(
+                It.IsAny<DbConnectionInfo>(),
+                It.IsAny<DbTableInfo>(),
+                It.IsAny<IReadOnlyList<DbColumnInfo>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [TestMethod]
@@ -340,7 +352,12 @@ public sealed class ConnectionOperationViewModelTests
             new[] { CreateColumn(table, "USER_ID", "NUMBER", 1) },
             new[] { Row(("USER_ID", "1")) });
         fixture.TestDataGeneratorMock
-            .Setup(x => x.Generate(table, It.IsAny<IReadOnlyList<DbColumnInfo>>(), It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(), 1))
+            .Setup(x => x.Generate(
+                table,
+                It.IsAny<IReadOnlyList<DbColumnInfo>>(),
+                It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(),
+                1,
+                It.IsAny<IReadOnlyDictionary<string, int>>()))
             .Returns(generatedData);
         fixture.ForeignKeyTestDataApplierMock
             .Setup(x => x.Apply(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>()))
@@ -365,6 +382,64 @@ public sealed class ConnectionOperationViewModelTests
             Times.Never);
     }
 
+    [TestMethod]
+    public async Task CreateTestDataはDirect指定ありの場合既存キー最大値を生成処理へ渡す()
+    {
+        // Arrange
+        // 直接INSERTでは、既存テーブルに続けてデータを追加します。
+        // そのため、ViewModelはDB上の現在最大値を取得し、
+        // Generatorへ「ここから続けて採番してね」という開始位置を渡します。
+        var fixture = CreateFixture();
+        var connection = CreateConnection();
+        var table = CreateTable("PLMCONSOLE", "USERS");
+        var userIdColumn = CreateColumn(table, "USER_ID", "NUMBER", 1);
+        var startNumbers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PLMCONSOLE.USERS.USER_ID"] = 100
+        };
+        var generatedData = new GeneratedTestData(
+            table,
+            new[] { userIdColumn },
+            new[] { Row(("USER_ID", "101")) });
+
+        fixture.TableInfoRepositoryMock
+            .Setup(x => x.GetTablesAsync(connection, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { table });
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(connection, table, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { userIdColumn });
+        fixture.ExistingKeyValueRepositoryMock
+            .Setup(x => x.GetMaxValuesAsync(connection, table, It.IsAny<IReadOnlyList<DbColumnInfo>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(startNumbers);
+        fixture.TestDataGeneratorMock
+            .Setup(x => x.Generate(
+                table,
+                It.IsAny<IReadOnlyList<DbColumnInfo>>(),
+                It.IsAny<IReadOnlyList<ColumnSampleDataSetting>>(),
+                1,
+                It.Is<IReadOnlyDictionary<string, int>>(values =>
+                    values.ContainsKey("PLMCONSOLE.USERS.USER_ID")
+                    && values["PLMCONSOLE.USERS.USER_ID"] == 100)))
+            .Returns(generatedData);
+        fixture.ForeignKeyTestDataApplierMock
+            .Setup(x => x.Apply(It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>()))
+            .Returns((IReadOnlyList<GeneratedTestData> testDataList, IReadOnlyList<ForeignKeyRelationSetting> _) => testDataList);
+        fixture.DirectInsertRepositoryMock
+            .Setup(x => x.SaveAsync(connection, It.IsAny<IReadOnlyList<GeneratedTestData>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDataOutputResult("direct-output", Array.Empty<string>()));
+
+        await fixture.ViewModel.Initialize(connection);
+        fixture.ViewModel.TablesSource[0].IsSelected = true;
+
+        // Act
+        await fixture.ViewModel.CreateTestData(rowCount: 1, directInsert: true);
+
+        // Assert
+        fixture.ExistingKeyValueRepositoryMock.Verify(
+            x => x.GetMaxValuesAsync(connection, table, It.IsAny<IReadOnlyList<DbColumnInfo>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static TestFixture CreateFixture()
     {
         var tableInfoRepositoryMock = new Mock<IDbTableInfoRepository>();
@@ -373,6 +448,7 @@ public sealed class ConnectionOperationViewModelTests
         var boundaryTestDataGeneratorMock = new Mock<IBoundaryTestDataGenerator>();
         var outputRepositoryMock = new Mock<ITestDataOutputRepository>();
         var directInsertRepositoryMock = new Mock<ITestDataDirectInsertRepository>();
+        var existingKeyValueRepositoryMock = new Mock<IExistingKeyValueRepository>();
         var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
         var templateRepositoryMock = new Mock<IColumnSampleDataTemplateRepository>();
         var foreignKeyRelationRepositoryMock = new Mock<IForeignKeyRelationRepository>();
@@ -393,6 +469,13 @@ public sealed class ConnectionOperationViewModelTests
         foreignKeyRelationRepositoryMock
             .Setup(x => x.SaveAllAsync(It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        existingKeyValueRepositoryMock
+            .Setup(x => x.GetMaxValuesAsync(
+                It.IsAny<DbConnectionInfo>(),
+                It.IsAny<DbTableInfo>(),
+                It.IsAny<IReadOnlyList<DbColumnInfo>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase));
 
         var vm = new ConnectionOperationViewModel(
             tableInfoRepositoryMock.Object,
@@ -401,6 +484,7 @@ public sealed class ConnectionOperationViewModelTests
             boundaryTestDataGeneratorMock.Object,
             outputRepositoryMock.Object,
             directInsertRepositoryMock.Object,
+            existingKeyValueRepositoryMock.Object,
             sampleDataRepositoryMock.Object,
             templateRepositoryMock.Object,
             foreignKeyRelationRepositoryMock.Object,
@@ -413,6 +497,7 @@ public sealed class ConnectionOperationViewModelTests
             testDataGeneratorMock,
             outputRepositoryMock,
             directInsertRepositoryMock,
+            existingKeyValueRepositoryMock,
             sampleDataRepositoryMock,
             foreignKeyRelationRepositoryMock,
             foreignKeyTestDataApplierMock);
@@ -466,6 +551,7 @@ public sealed class ConnectionOperationViewModelTests
         Mock<ITestDataGenerator> TestDataGeneratorMock,
         Mock<ITestDataOutputRepository> OutputRepositoryMock,
         Mock<ITestDataDirectInsertRepository> DirectInsertRepositoryMock,
+        Mock<IExistingKeyValueRepository> ExistingKeyValueRepositoryMock,
         Mock<ISampleDataRepository> SampleDataRepositoryMock,
         Mock<IForeignKeyRelationRepository> ForeignKeyRelationRepositoryMock,
         Mock<IForeignKeyTestDataApplier> ForeignKeyTestDataApplierMock);

@@ -40,12 +40,14 @@ public class SimpleTestDataGenerator : ITestDataGenerator
     /// <param name="columns">生成対象のカラム一覧。</param>
     /// <param name="sampleDataSettings">カラムごとに選択されたサンプルデータ設定。</param>
     /// <param name="rowCount">生成する行数。</param>
+    /// <param name="columnStartNumbers">既存データに続けて採番するための、カラムごとの開始番号。</param>
     /// <returns>生成された通常テストデータ。</returns>
     public GeneratedTestData Generate(
         DbTableInfo table,
         IReadOnlyList<DbColumnInfo> columns,
         IReadOnlyList<ColumnSampleDataSetting>? sampleDataSettings = null,
-        int rowCount = 1)
+        int rowCount = 1,
+        IReadOnlyDictionary<string, int>? columnStartNumbers = null)
     {
         var sampleProvider = new SampleDataValueProvider(
             sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>(),
@@ -54,7 +56,7 @@ public class SimpleTestDataGenerator : ITestDataGenerator
             .OrderBy(column => column.OrdinalPosition)
             .ToList();
         var rows = new List<IReadOnlyDictionary<string, string?>>();
-        _testValueFactory.StartGeneration();
+        _testValueFactory.StartGeneration(columnStartNumbers);
 
         for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
         {
@@ -75,7 +77,7 @@ public class SimpleTestDataGenerator : ITestDataGenerator
 
 internal interface ITestValueFactory
 {
-    void StartGeneration();
+    void StartGeneration(IReadOnlyDictionary<string, int>? columnStartNumbers = null);
 
     string Create(DbColumnInfo column);
 }
@@ -87,6 +89,7 @@ internal class SimpleTestValueFactory : ITestValueFactory
     private readonly Dictionary<string, int> _integerValueNumbers = new();
     private readonly Dictionary<string, int> _decimalValueNumbers = new();
     private readonly Dictionary<string, int> _binaryValueNumbers = new();
+    private readonly Dictionary<string, int> _columnStartNumbers = new(StringComparer.OrdinalIgnoreCase);
     private string _dateValue = string.Empty;
 
     private static readonly HashSet<string> TextTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -170,13 +173,24 @@ internal class SimpleTestValueFactory : ITestValueFactory
         _now = now;
     }
 
-    public void StartGeneration()
+    public void StartGeneration(IReadOnlyDictionary<string, int>? columnStartNumbers = null)
     {
         _textValueNumbers.Clear();
         _integerValueNumbers.Clear();
         _decimalValueNumbers.Clear();
         _binaryValueNumbers.Clear();
+        _columnStartNumbers.Clear();
         _dateValue = _now().ToString("yyyy-MM-dd HH:mm:ss");
+
+        if (columnStartNumbers == null)
+        {
+            return;
+        }
+
+        foreach (var pair in columnStartNumbers)
+        {
+            _columnStartNumbers[pair.Key] = pair.Value;
+        }
     }
 
     public string Create(DbColumnInfo column)
@@ -208,19 +222,28 @@ internal class SimpleTestValueFactory : ITestValueFactory
         return string.Empty;
     }
 
-    private static int NextValue(
+    private int NextValue(
         Dictionary<string, int> valueNumbers,
         DbColumnInfo column,
         int maximum)
     {
         var key = CreateColumnKey(column);
+        var hasStartNumber = _columnStartNumbers.TryGetValue(key, out var startNumber);
         var current = valueNumbers.TryGetValue(key, out var value)
             ? value
-            : 0;
+            : hasStartNumber
+                ? startNumber
+                : 0;
         var next = current + 1;
 
         if (next > maximum)
         {
+            if (hasStartNumber)
+            {
+                throw new InvalidOperationException(
+                    $"{column.SchemaName}.{column.TableName}.{column.ColumnName} は既存データの最大値 {current} から {maximum} を超えるため、キー重複を避けて追加作成できません。");
+            }
+
             next = 1;
         }
 

@@ -17,6 +17,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private readonly IBoundaryTestDataGenerator _boundaryTestDataGenerator;
     private readonly ITestDataOutputRepository _testDataOutputRepository;
     private readonly ITestDataDirectInsertRepository _testDataDirectInsertRepository;
+    private readonly IExistingKeyValueRepository _existingKeyValueRepository;
     private readonly ISampleDataRepository _sampleDataRepository;
     private readonly IColumnSampleDataTemplateRepository _templateRepository;
     private readonly IForeignKeyRelationRepository _foreignKeyRelationRepository;
@@ -72,6 +73,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
         IBoundaryTestDataGenerator boundaryTestDataGenerator,
         ITestDataOutputRepository testDataOutputRepository,
         ITestDataDirectInsertRepository testDataDirectInsertRepository,
+        IExistingKeyValueRepository existingKeyValueRepository,
         ISampleDataRepository sampleDataRepository,
         IColumnSampleDataTemplateRepository templateRepository,
         IForeignKeyRelationRepository foreignKeyRelationRepository,
@@ -83,6 +85,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
         _boundaryTestDataGenerator = boundaryTestDataGenerator;
         _testDataOutputRepository = testDataOutputRepository;
         _testDataDirectInsertRepository = testDataDirectInsertRepository;
+        _existingKeyValueRepository = existingKeyValueRepository;
         _sampleDataRepository = sampleDataRepository;
         _templateRepository = templateRepository;
         _foreignKeyRelationRepository = foreignKeyRelationRepository;
@@ -298,11 +301,15 @@ internal class ConnectionOperationViewModel : ViewModelBase
         foreach (var table in selectedTables)
         {
             var columns = await _dbTableSchemaRepository.GetColumnsAsync(_connection, table);
+            var columnStartNumbers = directInsert
+                ? await _existingKeyValueRepository.GetMaxValuesAsync(_connection, table, columns)
+                : new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var testData = _testDataGenerator.Generate(
                 table,
                 columns,
                 GetSampleDataSettings(table),
-                rowCount);
+                rowCount,
+                columnStartNumbers);
 
             testDataList.Add(testData);
         }

@@ -107,9 +107,16 @@ internal class ConnectionOperationViewModel : ViewModelBase
 
         SampleDataKindsSource.Clear();
         SampleDataKindsSource.Add(string.Empty);
+        SampleDataKindsSource.Add(SampleDataKindNames.Normal);
+        SampleDataKindsSource.Add(SampleDataKindNames.Random);
 
         foreach (var kind in _sampleDataRepository.GetKinds())
         {
+            if (SampleDataKindNames.IsReserved(kind))
+            {
+                continue;
+            }
+
             SampleDataKindsSource.Add(kind);
         }
 

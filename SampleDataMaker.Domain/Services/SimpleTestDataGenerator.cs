@@ -9,6 +9,7 @@ namespace SampleDataMaker.Domain.Services;
 public class SimpleTestDataGenerator : ITestDataGenerator
 {
     private readonly ITestValueFactory _testValueFactory;
+    private readonly ITestValueFactory _randomTestValueFactory;
     private readonly ISampleDataRepository _sampleDataRepository;
 
     /// <summary>
@@ -16,7 +17,7 @@ public class SimpleTestDataGenerator : ITestDataGenerator
     /// </summary>
     /// <param name="sampleDataRepository">選択済みサンプルデータを取得するリポジトリ。</param>
     public SimpleTestDataGenerator(ISampleDataRepository sampleDataRepository)
-        : this(new SimpleTestValueFactory(), sampleDataRepository)
+        : this(new SimpleTestValueFactory(), new RandomTestValueFactory(), sampleDataRepository)
     {
     }
 
@@ -28,8 +29,17 @@ public class SimpleTestDataGenerator : ITestDataGenerator
     internal SimpleTestDataGenerator(
         ITestValueFactory testValueFactory,
         ISampleDataRepository sampleDataRepository)
+        : this(testValueFactory, new RandomTestValueFactory(), sampleDataRepository)
+    {
+    }
+
+    internal SimpleTestDataGenerator(
+        ITestValueFactory testValueFactory,
+        ITestValueFactory randomTestValueFactory,
+        ISampleDataRepository sampleDataRepository)
     {
         _testValueFactory = testValueFactory;
+        _randomTestValueFactory = randomTestValueFactory;
         _sampleDataRepository = sampleDataRepository;
     }
 
@@ -52,18 +62,36 @@ public class SimpleTestDataGenerator : ITestDataGenerator
         var sampleProvider = new SampleDataValueProvider(
             sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>(),
             _sampleDataRepository);
+        var sampleDataSettingsByColumn = (sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>())
+            .GroupBy(setting => setting.ColumnName)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         var orderedColumns = columns
             .OrderBy(column => column.OrdinalPosition)
             .ToList();
         var rows = new List<IReadOnlyDictionary<string, string?>>();
         _testValueFactory.StartGeneration(columnStartNumbers);
+        _randomTestValueFactory.StartGeneration(columnStartNumbers);
 
         for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
         {
             IReadOnlyDictionary<string, string?> row = orderedColumns
                 .ToDictionary<DbColumnInfo, string, string?>(
                     column => column.ColumnName,
-                    column => sampleProvider.TryCreate(column, rowIndex) ?? _testValueFactory.Create(column));
+                    column =>
+                    {
+                        if (sampleDataSettingsByColumn.TryGetValue(column.ColumnName, out var setting)
+                            && SampleDataKindNames.IsRandom(setting.SampleDataKind))
+                        {
+                            return _randomTestValueFactory.Create(column);
+                        }
+
+                        if (sampleProvider.TryCreate(column, rowIndex, out var sampleValue))
+                        {
+                            return sampleValue;
+                        }
+
+                        return _testValueFactory.Create(column);
+                    });
 
             rows.Add(row);
         }
@@ -79,7 +107,7 @@ internal interface ITestValueFactory
 {
     void StartGeneration(IReadOnlyDictionary<string, int>? columnStartNumbers = null);
 
-    string Create(DbColumnInfo column);
+    string? Create(DbColumnInfo column);
 }
 
 internal class SimpleTestValueFactory : ITestValueFactory
@@ -444,5 +472,255 @@ internal class SimpleTestValueFactory : ITestValueFactory
     private static string CreateColumnKey(DbColumnInfo column)
     {
         return $"{column.SchemaName}.{column.TableName}.{column.ColumnName}";
+    }
+}
+
+internal class RandomTestValueFactory : ITestValueFactory
+{
+    private const string Characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private readonly Random _random;
+
+    private static readonly HashSet<string> TextTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "char",
+        "nchar",
+        "varchar",
+        "nvarchar",
+        "varchar2",
+        "nvarchar2",
+        "text",
+        "ntext",
+        "clob",
+        "nclob",
+        "uniqueidentifier",
+        "xml"
+    };
+
+    private static readonly HashSet<string> IntegerTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bigint",
+        "int",
+        "smallint",
+        "tinyint",
+        "bit"
+    };
+
+    private static readonly HashSet<string> DecimalTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "decimal",
+        "numeric",
+        "money",
+        "smallmoney",
+        "float",
+        "real",
+        "number",
+        "binary_float",
+        "binary_double"
+    };
+
+    private static readonly HashSet<string> DateTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "date",
+        "datetime",
+        "datetime2",
+        "datetimeoffset",
+        "smalldatetime",
+        "time",
+        "timestamp",
+        "timestamp with time zone",
+        "timestamp with local time zone"
+    };
+
+    public RandomTestValueFactory()
+        : this(new Random())
+    {
+    }
+
+    internal RandomTestValueFactory(Random random)
+    {
+        _random = random;
+    }
+
+    public void StartGeneration(IReadOnlyDictionary<string, int>? columnStartNumbers = null)
+    {
+    }
+
+    public string? Create(DbColumnInfo column)
+    {
+        var dataType = NormalizeDataType(column.DataType);
+
+        if (column.IsNullable && _random.Next(0, 10) == 0)
+        {
+            return null;
+        }
+
+        if (TextTypes.Contains(dataType))
+        {
+            return CreateText(column, dataType);
+        }
+
+        if (IntegerTypes.Contains(dataType))
+        {
+            return CreateInteger(dataType);
+        }
+
+        if (DecimalTypes.Contains(dataType))
+        {
+            return CreateDecimal(column);
+        }
+
+        if (DateTypes.Contains(dataType))
+        {
+            return CreateDate(dataType);
+        }
+
+        if (IsBinary(dataType))
+        {
+            return $"0x{_random.Next(0, 256):X2}";
+        }
+
+        return string.Empty;
+    }
+
+    private string CreateText(DbColumnInfo column, string dataType)
+    {
+        if (_random.Next(0, 10) == 0 && CanUseEmptyString(dataType))
+        {
+            return string.Empty;
+        }
+
+        var maxLength = GetEffectiveTextLength(column, dataType);
+        if (maxLength == null || maxLength <= 0)
+        {
+            maxLength = 10;
+        }
+
+        var length = _random.Next(1, Math.Min(maxLength.Value, 32) + 1);
+
+        return new string(
+            Enumerable
+                .Range(0, length)
+                .Select(_ => Characters[_random.Next(Characters.Length)])
+                .ToArray());
+    }
+
+    private string CreateInteger(string dataType)
+    {
+        return dataType.ToLowerInvariant() switch
+        {
+            "bit" => _random.Next(0, 2).ToString(),
+            "tinyint" => _random.Next(byte.MinValue, byte.MaxValue + 1).ToString(),
+            "smallint" => _random.Next(short.MinValue, short.MaxValue + 1).ToString(),
+            _ => _random.Next(0, int.MaxValue).ToString()
+        };
+    }
+
+    private string CreateDecimal(DbColumnInfo column)
+    {
+        var scale = Math.Max(0, column.NumericScale.GetValueOrDefault(2));
+        var integerDigits = Math.Max(1, column.NumericPrecision.GetValueOrDefault((byte)9) - scale);
+        var integerMaximum = CreateMaximumByDigits(integerDigits);
+        var integerPart = _random.Next(0, integerMaximum + 1).ToString();
+
+        if (scale == 0)
+        {
+            return integerPart;
+        }
+
+        var decimalPart = _random.Next(0, CreateMaximumByDigits(scale) + 1)
+            .ToString()
+            .PadLeft(scale, '0');
+
+        return $"{integerPart}.{decimalPart}";
+    }
+
+    private string CreateDate(string dataType)
+    {
+        var date = new DateTime(2026, 1, 1)
+            .AddDays(_random.Next(0, 365))
+            .AddSeconds(_random.Next(0, 24 * 60 * 60));
+
+        return dataType.Equals("time", StringComparison.OrdinalIgnoreCase)
+            ? date.ToString("HH:mm:ss")
+            : dataType.Equals("date", StringComparison.OrdinalIgnoreCase)
+                ? date.ToString("yyyy-MM-dd")
+            : date.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    private static int CreateMaximumByDigits(int digits)
+    {
+        if (digits <= 0)
+        {
+            return 1;
+        }
+
+        if (digits >= 9)
+        {
+            return int.MaxValue - 1;
+        }
+
+        return (int)Math.Pow(10, digits) - 1;
+    }
+
+    private static bool CanUseEmptyString(string dataType)
+    {
+        return !dataType.Equals("uniqueidentifier", StringComparison.OrdinalIgnoreCase)
+            && !dataType.Equals("xml", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int? GetEffectiveTextLength(DbColumnInfo column, string dataType)
+    {
+        var parsedLength = TryParseLength(column.DataType);
+        var maxLength = parsedLength ?? column.MaxLength;
+
+        if (maxLength is null || maxLength <= 0)
+        {
+            return maxLength;
+        }
+
+        if (dataType.StartsWith("n", StringComparison.OrdinalIgnoreCase)
+            && parsedLength is null)
+        {
+            maxLength = Math.Max(1, maxLength.Value / 2);
+        }
+
+        return maxLength;
+    }
+
+    private static int? TryParseLength(string dataType)
+    {
+        var startIndex = dataType.IndexOf('(');
+        var endIndex = dataType.IndexOf(')');
+
+        if (startIndex < 0 || endIndex <= startIndex)
+        {
+            return null;
+        }
+
+        var lengthText = dataType[(startIndex + 1)..endIndex].Trim();
+
+        return int.TryParse(lengthText, out var length)
+            ? length
+            : null;
+    }
+
+    private static bool IsBinary(string dataType)
+    {
+        return dataType.Equals("binary", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("varbinary", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("image", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("raw", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("long raw", StringComparison.OrdinalIgnoreCase)
+            || dataType.Equals("blob", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeDataType(string dataType)
+    {
+        var normalized = dataType.Trim();
+        var parenthesisIndex = normalized.IndexOf('(');
+
+        return parenthesisIndex < 0
+            ? normalized
+            : normalized[..parenthesisIndex].Trim();
     }
 }

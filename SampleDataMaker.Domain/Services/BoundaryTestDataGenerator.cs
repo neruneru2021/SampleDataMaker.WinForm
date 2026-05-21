@@ -68,8 +68,7 @@ public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
                     return _valueFactory.CreateUnique(column, rowNumber);
                 }
 
-                var sampleValue = sampleProvider.TryCreate(column, rowNumber - 1);
-                if (sampleValue != null)
+                if (sampleProvider.TryCreate(column, rowNumber - 1, out var sampleValue))
                 {
                     return sampleValue;
                 }

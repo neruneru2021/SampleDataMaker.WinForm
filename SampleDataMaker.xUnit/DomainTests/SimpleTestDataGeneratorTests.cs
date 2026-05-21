@@ -84,6 +84,89 @@ public sealed class SimpleTestDataGeneratorTests
     }
 
     [TestMethod]
+    public void Normalが選択されたカラムはデータ型に応じたデフォルト値を作成する()
+    {
+        // Arrange
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+
+        var generator = new SimpleTestDataGenerator(
+            new SimpleTestValueFactory(() => new DateTimeOffset(2026, 5, 17, 10, 30, 45, TimeSpan.FromHours(9))),
+            sampleDataRepositoryMock.Object);
+        var table = CreateTable("dbo", "Users");
+        var columns = new[]
+        {
+            CreateColumn("Id", "int", ordinalPosition: 1),
+            CreateColumn("Name", "varchar", ordinalPosition: 2, maxLength: 100)
+        };
+        var settings = new[]
+        {
+            new ColumnSampleDataSetting
+            {
+                ColumnName = "Id",
+                SampleDataKind = SampleDataKindNames.Normal
+            },
+            new ColumnSampleDataSetting
+            {
+                ColumnName = "Name",
+                SampleDataKind = SampleDataKindNames.Normal
+            }
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, settings, rowCount: 1);
+
+        // Assert
+        result.Rows[0]["Id"].Is("1");
+        result.Rows[0]["Name"].Is("1-Fixed-VARCHAR(100)");
+
+        sampleDataRepositoryMock.Verify(x => x.GetValues(It.IsAny<string>()), Times.Never);
+    }
+
+    [TestMethod]
+    public void Randomが選択されたカラムは固定シードで再現可能なランダム値を作成する()
+    {
+        // Arrange
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var table = CreateTable("dbo", "Users");
+        var columns = new[]
+        {
+            CreateColumn("Code", "varchar", ordinalPosition: 1, maxLength: 5),
+            CreateColumn("Amount", "number", ordinalPosition: 2, numericPrecision: 4, numericScale: 2),
+            CreateColumn("CreatedAt", "datetime", ordinalPosition: 3)
+        };
+        var settings = columns
+            .Select(column => new ColumnSampleDataSetting
+            {
+                ColumnName = column.ColumnName,
+                SampleDataKind = SampleDataKindNames.Random
+            })
+            .ToArray();
+        var firstGenerator = new SimpleTestDataGenerator(
+            new SimpleTestValueFactory(),
+            new RandomTestValueFactory(new Random(12345)),
+            sampleDataRepositoryMock.Object);
+        var secondGenerator = new SimpleTestDataGenerator(
+            new SimpleTestValueFactory(),
+            new RandomTestValueFactory(new Random(12345)),
+            sampleDataRepositoryMock.Object);
+
+        // Act
+        var firstResult = firstGenerator.Generate(table, columns, settings, rowCount: 3);
+        var secondResult = secondGenerator.Generate(table, columns, settings, rowCount: 3);
+
+        // Assert
+        for (var rowIndex = 0; rowIndex < 3; rowIndex++)
+        {
+            firstResult.Rows[rowIndex]["Code"].Is(secondResult.Rows[rowIndex]["Code"]);
+            firstResult.Rows[rowIndex]["Amount"].Is(secondResult.Rows[rowIndex]["Amount"]);
+            firstResult.Rows[rowIndex]["CreatedAt"].Is(secondResult.Rows[rowIndex]["CreatedAt"]);
+        }
+
+        firstResult.Rows.All(row => row["Code"]!.Length <= 5).IsTrue();
+        sampleDataRepositoryMock.Verify(x => x.GetValues(It.IsAny<string>()), Times.Never);
+    }
+
+    [TestMethod]
     public void 文字列型は桁数に収まる表記まで短くして値を作成する()
     {
         // Arrange
@@ -262,7 +345,9 @@ public sealed class SimpleTestDataGeneratorTests
         string dataType,
         int ordinalPosition,
         int? maxLength = null,
-        int? numericScale = null)
+        byte? numericPrecision = null,
+        int? numericScale = null,
+        bool isNullable = false)
     {
         return new DbColumnInfo
         {
@@ -272,6 +357,8 @@ public sealed class SimpleTestDataGeneratorTests
             DataType = dataType,
             OrdinalPosition = ordinalPosition,
             MaxLength = maxLength,
+            NumericPrecision = numericPrecision,
+            IsNullable = isNullable,
             NumericScale = numericScale
         };
     }

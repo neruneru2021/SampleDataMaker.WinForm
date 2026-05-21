@@ -79,6 +79,45 @@ public sealed class BoundaryTestDataGeneratorTests
         result.Rows[3]["PRODUCT_NAME"].Is("");
     }
 
+    [TestMethod]
+    public void Randomが選択されても境界値生成ではマスタ値もランダム値も使わない()
+    {
+        // Arrange
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        var generator = new BoundaryTestDataGenerator(sampleDataRepositoryMock.Object);
+        var table = CreateTable();
+        var columns = new[]
+        {
+            new DbColumnInfo
+            {
+                SchemaName = "PLMCONSOLE",
+                TableName = "PRODUCTS",
+                ColumnName = "PRODUCT_NAME",
+                DataType = "VARCHAR2",
+                OrdinalPosition = 1,
+                MaxLength = 3
+            }
+        };
+        var settings = new[]
+        {
+            new ColumnSampleDataSetting
+            {
+                ColumnName = "PRODUCT_NAME",
+                SampleDataKind = SampleDataKindNames.Random
+            }
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, settings);
+
+        // Assert
+        result.Rows.Count.Is(3);
+        result.Rows[0]["PRODUCT_NAME"].Is("");
+        result.Rows[1]["PRODUCT_NAME"].Is("ZZZ");
+        result.Rows[2]["PRODUCT_NAME"].Is("");
+        sampleDataRepositoryMock.Verify(x => x.GetValues(It.IsAny<string>()), Times.Never);
+    }
+
     private static DbTableInfo CreateTable()
     {
         return new DbTableInfo

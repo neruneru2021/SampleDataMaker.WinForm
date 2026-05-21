@@ -54,10 +54,12 @@ public sealed class ConnectionOperationViewModelTests
         fixture.ViewModel.TablesSource[0].SchemaName.Is("PLMCONSOLE");
         fixture.ViewModel.TablesSource[0].TableName.Is("PLM_CAD_DATA");
 
-        // 先頭には「未選択」を表す空文字が入ります。
+        // 先頭には「未選択」を表す空文字、その後に予約済みの生成モードが入ります。
         fixture.ViewModel.SampleDataKindsSource[0].Is("");
-        fixture.ViewModel.SampleDataKindsSource[1].Is("氏名");
-        fixture.ViewModel.SampleDataKindsSource[2].Is("都道府県");
+        fixture.ViewModel.SampleDataKindsSource[1].Is(SampleDataKindNames.Normal);
+        fixture.ViewModel.SampleDataKindsSource[2].Is(SampleDataKindNames.Random);
+        fixture.ViewModel.SampleDataKindsSource[3].Is("氏名");
+        fixture.ViewModel.SampleDataKindsSource[4].Is("都道府県");
     }
 
     [TestMethod]

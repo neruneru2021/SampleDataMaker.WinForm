@@ -9,6 +9,10 @@ namespace SampleDataMaker.WinForm.Views;
 /// </summary>
 public partial class MainView : Form
 {
+    // log4netにログに出すクラス名(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType)をセット
+    private static readonly log4net.ILog _logger =
+        log4net.LogManager.GetLogger(typeof(MainView));
+
     private MainViewModel _vm;
 
     /// <summary>
@@ -16,6 +20,8 @@ public partial class MainView : Form
     /// </summary>
     public MainView()
     {
+        _logger.Info("Application started.");
+
         InitializeComponent();
 
         _vm = DI.Resolve<MainViewModel>();
@@ -25,6 +31,7 @@ public partial class MainView : Form
         this.RegisterButton.Click += async (_, __) => await _vm.Save();
         this.AddOperationButtonColumn();
         this.dgvConnections.CellContentClick += async (_, __) => await DgvConnections_CellContentClick(_, __);
+        this.FormClosed += (_, __) => { _logger.Info("Application closed."); };
     }
 
     /// <summary>

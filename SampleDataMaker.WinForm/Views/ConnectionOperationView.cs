@@ -143,8 +143,8 @@ public partial class ConnectionOperationView : Form
             DataPropertyName = nameof(DbColumnSampleDataSelectionItem.SampleDataKind),
             DataSource = _vm.SampleDataKindsSource,
             AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-            MinimumWidth = 100,
-            Width = 110
+            MinimumWidth = 180,
+            Width = 260
         });
 
         ColumnsDataGridView.Columns.Add(new DataGridViewButtonColumn

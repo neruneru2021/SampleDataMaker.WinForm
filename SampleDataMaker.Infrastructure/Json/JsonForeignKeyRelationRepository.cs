@@ -10,11 +10,16 @@ public class JsonForeignKeyRelationRepository : IForeignKeyRelationRepository
     private readonly string _filePath;
 
     public JsonForeignKeyRelationRepository()
-    {
-        _filePath = Path.Combine(
+        : this(Path.Combine(
             AppContext.BaseDirectory,
             "master-data",
-            "foreign-key-relations.json");
+            "foreign-key-relations.json"))
+    {
+    }
+
+    public JsonForeignKeyRelationRepository(string filePath)
+    {
+        _filePath = filePath;
     }
 
     public IReadOnlyList<ForeignKeyRelationSetting> GetAll()
@@ -26,12 +31,16 @@ public class JsonForeignKeyRelationRepository : IForeignKeyRelationRepository
 
         var json = File.ReadAllText(_filePath);
 
-        return JsonSerializer.Deserialize<List<ForeignKeyRelationSetting>>(
+        var settings = JsonSerializer.Deserialize<List<ForeignKeyRelationSetting>>(
             json,
             new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             }) ?? new List<ForeignKeyRelationSetting>();
+
+        NormalizeDirections(settings);
+
+        return settings;
     }
 
     public async Task SaveAllAsync(
@@ -39,9 +48,11 @@ public class JsonForeignKeyRelationRepository : IForeignKeyRelationRepository
         CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
+        var normalizedSettings = settings.ToList();
+        NormalizeDirections(normalizedSettings);
 
         var json = JsonSerializer.Serialize(
-            settings,
+            normalizedSettings,
             new JsonSerializerOptions
             {
                 WriteIndented = true,
@@ -49,5 +60,41 @@ public class JsonForeignKeyRelationRepository : IForeignKeyRelationRepository
             });
 
         await File.WriteAllTextAsync(_filePath, json, cancellationToken);
+    }
+
+    private static void NormalizeDirections(IReadOnlyList<ForeignKeyRelationSetting> settings)
+    {
+        foreach (var group in settings.GroupBy(CreateUndirectedRelationKey))
+        {
+            var orderedSettings = group.ToList();
+            var forward = orderedSettings.FirstOrDefault(setting => !setting.IsReverse)
+                ?? orderedSettings[0];
+
+            foreach (var setting in orderedSettings)
+            {
+                setting.IsReverse = !ReferenceEquals(setting, forward);
+            }
+        }
+    }
+
+    private static string CreateUndirectedRelationKey(ForeignKeyRelationSetting setting)
+    {
+        var source = CreateColumnKey(
+            setting.SourceSchemaName,
+            setting.SourceTableName,
+            setting.SourceColumnName);
+        var reference = CreateColumnKey(
+            setting.ReferenceSchemaName,
+            setting.ReferenceTableName,
+            setting.ReferenceColumnName);
+
+        return string.CompareOrdinal(source, reference) <= 0
+            ? $"{source}|{reference}"
+            : $"{reference}|{source}";
+    }
+
+    private static string CreateColumnKey(string schemaName, string tableName, string columnName)
+    {
+        return $"{schemaName}.{tableName}.{columnName}";
     }
 }

@@ -11,13 +11,18 @@ public class SimpleTestDataGenerator : ITestDataGenerator
     private readonly ITestValueFactory _testValueFactory;
     private readonly ITestValueFactory _randomTestValueFactory;
     private readonly ISampleDataRepository _sampleDataRepository;
+    private readonly Random _categoryRandom;
 
     /// <summary>
     /// サンプルデータリポジトリを使って、通常テストデータ生成サービスを初期化します。
     /// </summary>
     /// <param name="sampleDataRepository">選択済みサンプルデータを取得するリポジトリ。</param>
     public SimpleTestDataGenerator(ISampleDataRepository sampleDataRepository)
-        : this(new SimpleTestValueFactory(), new RandomTestValueFactory(), sampleDataRepository)
+        : this(
+            new SimpleTestValueFactory(),
+            new RandomTestValueFactory(),
+            sampleDataRepository,
+            new Random())
     {
     }
 
@@ -29,7 +34,11 @@ public class SimpleTestDataGenerator : ITestDataGenerator
     internal SimpleTestDataGenerator(
         ITestValueFactory testValueFactory,
         ISampleDataRepository sampleDataRepository)
-        : this(testValueFactory, new RandomTestValueFactory(), sampleDataRepository)
+        : this(
+            testValueFactory,
+            new RandomTestValueFactory(),
+            sampleDataRepository,
+            new Random())
     {
     }
 
@@ -37,10 +46,24 @@ public class SimpleTestDataGenerator : ITestDataGenerator
         ITestValueFactory testValueFactory,
         ITestValueFactory randomTestValueFactory,
         ISampleDataRepository sampleDataRepository)
+        : this(
+            testValueFactory,
+            randomTestValueFactory,
+            sampleDataRepository,
+            new Random())
+    {
+    }
+
+    internal SimpleTestDataGenerator(
+        ITestValueFactory testValueFactory,
+        ITestValueFactory randomTestValueFactory,
+        ISampleDataRepository sampleDataRepository,
+        Random categoryRandom)
     {
         _testValueFactory = testValueFactory;
         _randomTestValueFactory = randomTestValueFactory;
         _sampleDataRepository = sampleDataRepository;
+        _categoryRandom = categoryRandom;
     }
 
     /// <summary>
@@ -61,7 +84,8 @@ public class SimpleTestDataGenerator : ITestDataGenerator
     {
         var sampleProvider = new SampleDataValueProvider(
             sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>(),
-            _sampleDataRepository);
+            _sampleDataRepository,
+            _categoryRandom);
         var sampleDataSettingsByColumn = (sampleDataSettings ?? Array.Empty<ColumnSampleDataSetting>())
             .GroupBy(setting => setting.ColumnName)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
@@ -69,37 +93,56 @@ public class SimpleTestDataGenerator : ITestDataGenerator
             .OrderBy(column => column.OrdinalPosition)
             .ToList();
         var rows = new List<IReadOnlyDictionary<string, string?>>();
+        var rowMetadata = new List<GeneratedRowMetadata>();
         _testValueFactory.StartGeneration(columnStartNumbers);
         _randomTestValueFactory.StartGeneration(columnStartNumbers);
 
         for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
         {
-            IReadOnlyDictionary<string, string?> row = orderedColumns
-                .ToDictionary<DbColumnInfo, string, string?>(
-                    column => column.ColumnName,
-                    column =>
+            var row = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            var metadataByColumn = new Dictionary<string, GeneratedColumnMetadata>(
+                StringComparer.OrdinalIgnoreCase);
+            var selectedCategoryRecords = new Dictionary<string, SampleDataCategoryRecord>(
+                StringComparer.Ordinal);
+
+            foreach (var column in orderedColumns)
+            {
+                if (sampleDataSettingsByColumn.TryGetValue(column.ColumnName, out var setting)
+                    && SampleDataKindNames.IsRandom(setting.SampleDataKind))
+                {
+                    row[column.ColumnName] = _randomTestValueFactory.Create(column);
+                    continue;
+                }
+
+                if (sampleProvider.TryCreate(
+                    column,
+                    rowIndex,
+                    selectedCategoryRecords,
+                    out var sampleValue,
+                    out var metadata))
+                {
+                    row[column.ColumnName] = sampleValue;
+
+                    if (metadata != null)
                     {
-                        if (sampleDataSettingsByColumn.TryGetValue(column.ColumnName, out var setting)
-                            && SampleDataKindNames.IsRandom(setting.SampleDataKind))
-                        {
-                            return _randomTestValueFactory.Create(column);
-                        }
+                        metadataByColumn[column.ColumnName] = metadata;
+                    }
 
-                        if (sampleProvider.TryCreate(column, rowIndex, out var sampleValue))
-                        {
-                            return sampleValue;
-                        }
+                    continue;
+                }
 
-                        return _testValueFactory.Create(column);
-                    });
+                row[column.ColumnName] = _testValueFactory.Create(column);
+            }
 
             rows.Add(row);
+            rowMetadata.Add(new GeneratedRowMetadata(rowIndex, metadataByColumn));
         }
 
         return new GeneratedTestData(
             table,
             orderedColumns,
-            rows);
+            rows,
+            rowMetadata);
     }
 }
 

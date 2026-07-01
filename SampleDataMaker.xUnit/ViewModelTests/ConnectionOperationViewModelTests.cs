@@ -45,6 +45,12 @@ public sealed class ConnectionOperationViewModelTests
         fixture.SampleDataRepositoryMock
             .Setup(x => x.GetKinds())
             .Returns(new[] { "氏名", "都道府県" });
+        fixture.SampleDataRepositoryMock
+            .Setup(x => x.GetCategoryItems())
+            .Returns(new[]
+            {
+                new SampleDataCategoryItem("個人情報セット", "氏名")
+            });
 
         // Act
         await fixture.ViewModel.Initialize(connection);
@@ -60,6 +66,7 @@ public sealed class ConnectionOperationViewModelTests
         fixture.ViewModel.SampleDataKindsSource[2].Is(SampleDataKindNames.Random);
         fixture.ViewModel.SampleDataKindsSource[3].Is("氏名");
         fixture.ViewModel.SampleDataKindsSource[4].Is("都道府県");
+        fixture.ViewModel.SampleDataKindsSource[5].Is("[個人情報セット.氏名]");
     }
 
     [TestMethod]
@@ -336,6 +343,68 @@ public sealed class ConnectionOperationViewModelTests
     }
 
     [TestMethod]
+    public async Task CreateTestDataはカテゴリ表示名をカテゴリ設定へ変換してGeneratorへ渡す()
+    {
+        // Arrange
+        var fixture = CreateFixture();
+        var connection = CreateConnection();
+        var table = CreateTable("PLMCONSOLE", "USERS");
+        var column = CreateColumn(table, "NAME", "VARCHAR", 1);
+        var generatedData = new GeneratedTestData(
+            table,
+            new[] { column },
+            new[] { Row(("NAME", "小嶋 彩花")) });
+
+        fixture.TableInfoRepositoryMock
+            .Setup(x => x.GetTablesAsync(connection, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { table });
+        fixture.TableSchemaRepositoryMock
+            .Setup(x => x.GetColumnsAsync(connection, table, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { column });
+        fixture.SampleDataRepositoryMock
+            .Setup(x => x.GetCategoryItems())
+            .Returns(new[]
+            {
+                new SampleDataCategoryItem("個人情報セット", "氏名")
+            });
+        fixture.TestDataGeneratorMock
+            .Setup(x => x.Generate(
+                table,
+                It.IsAny<IReadOnlyList<DbColumnInfo>>(),
+                It.Is<IReadOnlyList<ColumnSampleDataSetting>>(settings =>
+                    settings.Count == 1
+                    && settings[0].SampleDataKind == "[個人情報セット.氏名]"
+                    && settings[0].CategoryName == "個人情報セット"
+                    && settings[0].CategoryItemName == "氏名"),
+                1,
+                It.IsAny<IReadOnlyDictionary<string, int>>()))
+            .Returns(generatedData);
+        fixture.ForeignKeyTestDataApplierMock
+            .Setup(x => x.Apply(
+                It.IsAny<IReadOnlyList<GeneratedTestData>>(),
+                It.IsAny<IReadOnlyList<ForeignKeyRelationSetting>>()))
+            .Returns((
+                IReadOnlyList<GeneratedTestData> testDataList,
+                IReadOnlyList<ForeignKeyRelationSetting> _) => testDataList);
+        fixture.OutputRepositoryMock
+            .Setup(x => x.SaveAsync(
+                It.IsAny<IReadOnlyList<GeneratedTestData>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestDataOutputResult("file-output", Array.Empty<string>()));
+
+        await fixture.ViewModel.Initialize(connection);
+        await fixture.ViewModel.LoadColumns(new DbTableSelectionItem(table));
+        fixture.ViewModel.ColumnsSource[0].SampleDataKind = "[個人情報セット.氏名]";
+        fixture.ViewModel.TablesSource[0].IsSelected = true;
+
+        // Act
+        await fixture.ViewModel.CreateTestData(rowCount: 1);
+
+        // Assert
+        fixture.TestDataGeneratorMock.VerifyAll();
+    }
+
+    [TestMethod]
     public async Task CreateTestDataはDirect指定ありの場合DB直接登録Repositoryへ保存する()
     {
         // Arrange
@@ -462,6 +531,9 @@ public sealed class ConnectionOperationViewModelTests
         sampleDataRepositoryMock
             .Setup(x => x.GetKinds())
             .Returns(Array.Empty<string>());
+        sampleDataRepositoryMock
+            .Setup(x => x.GetCategoryItems())
+            .Returns(Array.Empty<SampleDataCategoryItem>());
         templateRepositoryMock
             .Setup(x => x.GetAll())
             .Returns(Array.Empty<ColumnSampleDataTemplate>());

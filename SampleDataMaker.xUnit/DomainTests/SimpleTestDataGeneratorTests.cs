@@ -54,6 +54,64 @@ public sealed class SimpleTestDataGeneratorTests
     }
 
     [TestMethod]
+    public void 同じカテゴリを選択したカラムは同じカテゴリレコードから値を作成する()
+    {
+        // Arrange
+        var sampleDataRepositoryMock = new Mock<ISampleDataRepository>();
+        sampleDataRepositoryMock
+            .Setup(x => x.GetCategoryRecords("個人情報セット"))
+            .Returns(new[]
+            {
+                new SampleDataCategoryRecord
+                {
+                    Id = "person-001",
+                    Values = new Dictionary<string, string>
+                    {
+                        ["苗字"] = "加藤",
+                        ["苗字かな"] = "かとう"
+                    }
+                }
+            });
+        var generator = new SimpleTestDataGenerator(
+            new SimpleTestValueFactory(),
+            new RandomTestValueFactory(new Random(12345)),
+            sampleDataRepositoryMock.Object,
+            new Random(12345));
+        var table = CreateTable("dbo", "Users");
+        var columns = new[]
+        {
+            CreateColumn("LastName", "varchar", ordinalPosition: 1),
+            CreateColumn("LastNameKana", "varchar", ordinalPosition: 2)
+        };
+        var settings = new[]
+        {
+            new ColumnSampleDataSetting
+            {
+                ColumnName = "LastName",
+                SampleDataKind = "[個人情報セット.苗字]",
+                CategoryName = "個人情報セット",
+                CategoryItemName = "苗字"
+            },
+            new ColumnSampleDataSetting
+            {
+                ColumnName = "LastNameKana",
+                SampleDataKind = "[個人情報セット.苗字かな]",
+                CategoryName = "個人情報セット",
+                CategoryItemName = "苗字かな"
+            }
+        };
+
+        // Act
+        var result = generator.Generate(table, columns, settings, rowCount: 1);
+
+        // Assert
+        result.Rows[0]["LastName"].Is("加藤");
+        result.Rows[0]["LastNameKana"].Is("かとう");
+        result.RowMetadata[0].Columns["LastName"].CategoryRecordId.Is("person-001");
+        result.RowMetadata[0].Columns["LastNameKana"].CategoryRecordId.Is("person-001");
+    }
+
+    [TestMethod]
     public void 種類が未選択のカラムはデータ型に応じたデフォルト値を作成する()
     {
         // Arrange

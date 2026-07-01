@@ -23,6 +23,8 @@ internal class ConnectionOperationViewModel : ViewModelBase
     private readonly IForeignKeyRelationRepository _foreignKeyRelationRepository;
     private readonly IForeignKeyTestDataApplier _foreignKeyTestDataApplier;
     private readonly Dictionary<string, BindingList<DbColumnSampleDataSelectionItem>> _columnsByTable = new();
+    private readonly Dictionary<string, SampleDataCategoryItem> _categoryItemsByDisplayName =
+        new(StringComparer.Ordinal);
     private List<ForeignKeyRelationSetting> _foreignKeySettings = new();
     private DbConnectionInfo? _connection;
     private DbTableInfo? _currentTable;
@@ -109,6 +111,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
         SampleDataKindsSource.Add(string.Empty);
         SampleDataKindsSource.Add(SampleDataKindNames.Normal);
         SampleDataKindsSource.Add(SampleDataKindNames.Random);
+        _categoryItemsByDisplayName.Clear();
 
         foreach (var kind in _sampleDataRepository.GetKinds())
         {
@@ -118,6 +121,12 @@ internal class ConnectionOperationViewModel : ViewModelBase
             }
 
             SampleDataKindsSource.Add(kind);
+        }
+
+        foreach (var categoryItem in _sampleDataRepository.GetCategoryItems())
+        {
+            _categoryItemsByDisplayName[categoryItem.DisplayName] = categoryItem;
+            SampleDataKindsSource.Add(categoryItem.DisplayName);
         }
 
         TemplatesSource.Clear();
@@ -160,10 +169,15 @@ internal class ConnectionOperationViewModel : ViewModelBase
             .Where(setting => IsSourceColumn(setting, column))
             .ToList();
         var replacementSettings = settings
-            .SelectMany(setting => new[]
+            .SelectMany(setting =>
             {
-                setting,
-                CreateReverseSetting(setting)
+                setting.IsReverse = false;
+
+                return new[]
+                {
+                    setting,
+                    CreateReverseSetting(setting)
+                };
             });
 
         _foreignKeySettings = _foreignKeySettings
@@ -252,7 +266,7 @@ internal class ConnectionOperationViewModel : ViewModelBase
             TemplateName = templateName.Trim(),
             SchemaName = _currentTable.SchemaName,
             TableName = _currentTable.TableName,
-            Columns = ColumnsSource.Select(column => column.ToSetting()).ToList()
+            Columns = ColumnsSource.Select(CreateSampleDataSetting).ToList()
         };
 
         await _templateRepository.SaveAsync(template);
@@ -281,7 +295,11 @@ internal class ConnectionOperationViewModel : ViewModelBase
                 continue;
             }
 
-            columnItem.SampleDataKind = templateColumn.SampleDataKind;
+            columnItem.SampleDataKind = templateColumn.IsCategory
+                ? new SampleDataCategoryItem(
+                    templateColumn.CategoryName!,
+                    templateColumn.CategoryItemName!).DisplayName
+                : templateColumn.SampleDataKind;
         }
 
         ColumnsSource.ResetBindings();
@@ -389,8 +407,24 @@ internal class ConnectionOperationViewModel : ViewModelBase
         }
 
         return columnsSource
-            .Select(column => column.ToSetting())
+            .Select(CreateSampleDataSetting)
             .ToList();
+    }
+
+    private ColumnSampleDataSetting CreateSampleDataSetting(
+        DbColumnSampleDataSelectionItem columnItem)
+    {
+        var setting = columnItem.ToSetting();
+
+        if (_categoryItemsByDisplayName.TryGetValue(
+            columnItem.SampleDataKind,
+            out var categoryItem))
+        {
+            setting.CategoryName = categoryItem.CategoryName;
+            setting.CategoryItemName = categoryItem.ItemName;
+        }
+
+        return setting;
     }
 
     /// <summary>
@@ -496,7 +530,8 @@ internal class ConnectionOperationViewModel : ViewModelBase
             SourceColumnName = setting.ReferenceColumnName,
             ReferenceSchemaName = setting.SourceSchemaName,
             ReferenceTableName = setting.SourceTableName,
-            ReferenceColumnName = setting.SourceColumnName
+            ReferenceColumnName = setting.SourceColumnName,
+            IsReverse = true
         };
     }
 

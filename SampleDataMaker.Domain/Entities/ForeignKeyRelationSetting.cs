@@ -13,4 +13,6 @@ public class ForeignKeyRelationSetting
     public string ReferenceTableName { get; set; } = string.Empty;
 
     public string ReferenceColumnName { get; set; } = string.Empty;
+
+    public bool IsReverse { get; set; }
 }

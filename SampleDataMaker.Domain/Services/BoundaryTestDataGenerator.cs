@@ -26,56 +26,110 @@ public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
             _sampleDataRepository);
 
         var rows = new List<IReadOnlyDictionary<string, string?>>();
+        var rowMetadata = new List<GeneratedRowMetadata>();
         var rowNumber = 1;
 
         foreach (var column in orderedColumns)
         {
-            rows.Add(CreateRow(orderedColumns, column, _valueFactory.CreateMinimum(column), rowNumber++, sampleProvider));
-            rows.Add(CreateRow(orderedColumns, column, _valueFactory.CreateMaximum(column), rowNumber++, sampleProvider));
+            AddRow(
+                rows,
+                rowMetadata,
+                CreateRow(orderedColumns, column, _valueFactory.CreateMinimum(column), rowNumber++, sampleProvider));
+            AddRow(
+                rows,
+                rowMetadata,
+                CreateRow(orderedColumns, column, _valueFactory.CreateMaximum(column), rowNumber++, sampleProvider));
 
             if (column.IsNullable)
             {
-                rows.Add(CreateRow(orderedColumns, column, null, rowNumber++, sampleProvider));
+                AddRow(
+                    rows,
+                    rowMetadata,
+                    CreateRow(orderedColumns, column, null, rowNumber++, sampleProvider));
             }
 
             if (_valueFactory.CanUseEmptyString(column))
             {
-                rows.Add(CreateRow(orderedColumns, column, string.Empty, rowNumber++, sampleProvider));
+                AddRow(
+                    rows,
+                    rowMetadata,
+                    CreateRow(orderedColumns, column, string.Empty, rowNumber++, sampleProvider));
             }
         }
 
-        return new GeneratedTestData(table, orderedColumns, rows);
+        return new GeneratedTestData(table, orderedColumns, rows, rowMetadata);
     }
 
-    private IReadOnlyDictionary<string, string?> CreateRow(
+    private GeneratedBoundaryRow CreateRow(
         IReadOnlyList<DbColumnInfo> columns,
         DbColumnInfo targetColumn,
         string? targetValue,
         int rowNumber,
         SampleDataValueProvider sampleProvider)
     {
-        return columns.ToDictionary(
-            column => column.ColumnName,
-            column =>
+        var row = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var metadataByColumn = new Dictionary<string, GeneratedColumnMetadata>(
+            StringComparer.OrdinalIgnoreCase);
+        var selectedCategoryRecords = new Dictionary<string, SampleDataCategoryRecord>(
+            StringComparer.Ordinal);
+
+        foreach (var column in columns)
+        {
+            if (column.ColumnName == targetColumn.ColumnName)
             {
-                if (column.ColumnName == targetColumn.ColumnName)
+                row[column.ColumnName] = targetValue;
+                continue;
+            }
+
+            if (column.IsIndexed)
+            {
+                row[column.ColumnName] = _valueFactory.CreateUnique(column, rowNumber);
+                continue;
+            }
+
+            if (sampleProvider.TryCreate(
+                column,
+                rowNumber - 1,
+                selectedCategoryRecords,
+                out var sampleValue,
+                out var metadata))
+            {
+                row[column.ColumnName] = sampleValue;
+
+                if (metadata != null)
                 {
-                    return targetValue;
+                    metadataByColumn[column.ColumnName] = metadata;
                 }
 
-                if (column.IsIndexed)
-                {
-                    return _valueFactory.CreateUnique(column, rowNumber);
-                }
+                continue;
+            }
 
-                if (sampleProvider.TryCreate(column, rowNumber - 1, out var sampleValue))
-                {
-                    return sampleValue;
-                }
+            row[column.ColumnName] = _valueFactory.CreateDefault(column);
+        }
 
-                return _valueFactory.CreateDefault(column);
-            });
+        return new GeneratedBoundaryRow(
+            row,
+            new GeneratedRowMetadata(
+                rowNumber - 1,
+                metadataByColumn,
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    targetColumn.ColumnName
+                }));
     }
+
+    private static void AddRow(
+        ICollection<IReadOnlyDictionary<string, string?>> rows,
+        ICollection<GeneratedRowMetadata> rowMetadata,
+        GeneratedBoundaryRow generatedRow)
+    {
+        rows.Add(generatedRow.Values);
+        rowMetadata.Add(generatedRow.Metadata);
+    }
+
+    private sealed record GeneratedBoundaryRow(
+        IReadOnlyDictionary<string, string?> Values,
+        GeneratedRowMetadata Metadata);
 }
 
 internal class BoundaryTestValueFactory

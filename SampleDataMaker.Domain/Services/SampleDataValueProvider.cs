@@ -3,6 +3,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Domain.Services;
 
+/// <summary>
+/// カラム設定に応じて通常値または同一レコードのカテゴリ値を提供します。
+/// </summary>
 internal class SampleDataValueProvider
 {
     private readonly IReadOnlyDictionary<string, ColumnSampleDataSetting> _settings;

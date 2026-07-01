@@ -5,6 +5,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Json;
 
+/// <summary>
+/// DB接続情報をJSONファイルで読み書きします。
+/// </summary>
 public class JsonDbConnectionInfoRepository : IDbConnectionInfoRepository
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -74,6 +77,9 @@ public class JsonDbConnectionInfoRepository : IDbConnectionInfoRepository
         return Path.Combine(dir, "connections.json");
     }
 
+    /// <summary>
+    /// JSONファイルに保存するDB接続情報のルート要素を表します。
+    /// </summary>
     private sealed class DbConnectionSettings
     {
         public List<DbConnectionInfo> Connections { get; set; } = new();

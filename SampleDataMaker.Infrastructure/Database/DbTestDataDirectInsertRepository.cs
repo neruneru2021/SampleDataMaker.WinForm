@@ -5,6 +5,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// 生成したテストデータをトランザクション内で接続先DBへ登録します。
+/// </summary>
 public class DbTestDataDirectInsertRepository : ITestDataDirectInsertRepository
 {
     public async Task<TestDataOutputResult> SaveAsync(

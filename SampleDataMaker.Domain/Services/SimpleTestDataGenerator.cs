@@ -153,6 +153,9 @@ internal interface ITestValueFactory
     string? Create(DbColumnInfo column);
 }
 
+/// <summary>
+/// データ型に応じた連番ベースの通常値を作成します。
+/// </summary>
 internal class SimpleTestValueFactory : ITestValueFactory
 {
     private readonly Func<DateTimeOffset> _now;
@@ -518,6 +521,9 @@ internal class SimpleTestValueFactory : ITestValueFactory
     }
 }
 
+/// <summary>
+/// データ型・桁数・NULL許容に応じたランダム値を作成します。
+/// </summary>
 internal class RandomTestValueFactory : ITestValueFactory
 {
     private const string Characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

@@ -5,6 +5,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Json;
 
+/// <summary>
+/// 外部キー設定をJSONへ保存し、旧形式の方向情報も補正して読み込みます。
+/// </summary>
 public class JsonForeignKeyRelationRepository : IForeignKeyRelationRepository
 {
     private readonly string _filePath;

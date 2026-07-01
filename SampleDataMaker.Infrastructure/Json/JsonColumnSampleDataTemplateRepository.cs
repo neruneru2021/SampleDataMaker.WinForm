@@ -5,6 +5,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Json;
 
+/// <summary>
+/// カラム別サンプルデータ設定のテンプレートをJSONファイルで読み書きします。
+/// </summary>
 public class JsonColumnSampleDataTemplateRepository : IColumnSampleDataTemplateRepository
 {
     private readonly string _directoryPath;

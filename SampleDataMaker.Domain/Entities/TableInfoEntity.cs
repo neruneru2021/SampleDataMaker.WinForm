@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace SampleDataMaker.Domain.Entities
 {
+    /// <summary>
+    /// テーブル一覧に表示するSQL Serverテーブルの識別情報を表します。
+    /// </summary>
     public sealed class TableInfoEntity //: ITableInfoEntity
     {
         public int ObjectId { get; set; }

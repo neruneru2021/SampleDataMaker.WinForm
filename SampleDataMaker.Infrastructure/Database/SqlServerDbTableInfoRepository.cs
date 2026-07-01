@@ -6,6 +6,9 @@ using System.Data;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// SQL Serverからテーブル一覧とプレビュー用データを取得します。
+/// </summary>
 public class SqlServerDbTableInfoRepository : IDbTableInfoRepository
 {
     public async Task<IReadOnlyList<DbTableInfo>> GetTablesAsync(

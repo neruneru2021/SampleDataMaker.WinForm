@@ -3,6 +3,9 @@ using SampleDataMaker.Infrastructure.Json;
 
 namespace SampleDataMaker.xUnit.InfrastructureTests;
 
+/// <summary>
+/// 新形式のサンプルデータJSONを正しく読み込めることを確認します。
+/// </summary>
 [TestClass]
 public sealed class JsonSampleDataRepositoryTests
 {

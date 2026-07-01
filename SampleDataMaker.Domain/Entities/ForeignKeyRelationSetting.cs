@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// 外部キーで結ばれた参照元カラムと参照先カラムの関係を表します。
+/// </summary>
 public class ForeignKeyRelationSetting
 {
     public string SourceSchemaName { get; set; } = string.Empty;

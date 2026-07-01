@@ -161,6 +161,9 @@ public sealed class ForeignKeySelectViewModelTests
         };
     }
 
+    /// <summary>
+    /// 外部キー選択画面のテスト対象とモックをまとめます。
+    /// </summary>
     private sealed record TestFixture(
         ForeignKeySelectViewModel ViewModel,
         Mock<IForeignKeyTypeMismatchConfirmationService> TypeMismatchConfirmationServiceMock);

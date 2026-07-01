@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// 画面で選択できるカテゴリ名と項目名の組み合わせを表します。
+/// </summary>
 public class SampleDataCategoryItem
 {
     public string CategoryName { get; }

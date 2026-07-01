@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// テーブル単位で保存するカラム別サンプルデータ設定のテンプレートを表します。
+/// </summary>
 public class ColumnSampleDataTemplate
 {
     public string TemplateName { get; set; } = string.Empty;

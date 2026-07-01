@@ -3,6 +3,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.SqlServer;
 
+/// <summary>
+/// SQL Serverのテーブル情報を返す旧形式のRepository実装です。
+/// </summary>
 internal class TableInfoSqlServer: ITableInfoRepository
 {
     public IReadOnlyList<TableInfoEntity> GetITableInfoList()

@@ -6,6 +6,9 @@ using System.Data;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// Oracleからテーブル一覧とプレビュー用データを取得します。
+/// </summary>
 public class OracleDbTableInfoRepository : IDbTableInfoRepository
 {
     public async Task<IReadOnlyList<DbTableInfo>> GetTablesAsync(

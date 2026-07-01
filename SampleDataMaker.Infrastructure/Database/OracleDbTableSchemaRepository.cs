@@ -5,6 +5,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// Oracleからテーブルのカラム定義とインデックス情報を取得します。
+/// </summary>
 public class OracleDbTableSchemaRepository : IDbTableSchemaRepository
 {
     public async Task<IReadOnlyList<DbColumnInfo>> GetColumnsAsync(

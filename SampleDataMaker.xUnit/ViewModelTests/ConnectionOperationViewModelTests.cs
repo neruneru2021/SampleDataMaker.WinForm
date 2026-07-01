@@ -618,6 +618,9 @@ public sealed class ConnectionOperationViewModelTests
         return values.ToDictionary(x => x.ColumnName, x => x.Value);
     }
 
+    /// <summary>
+    /// 接続操作画面のテスト対象と依存先モックをまとめます。
+    /// </summary>
     private sealed record TestFixture(
         ConnectionOperationViewModel ViewModel,
         Mock<IDbTableInfoRepository> TableInfoRepositoryMock,

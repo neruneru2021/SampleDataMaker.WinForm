@@ -5,6 +5,9 @@ using System.Data;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// DB種別に応じてテーブル情報の取得先Repositoryを切り替えます。
+/// </summary>
 public class CompositeDbTableInfoRepository : IDbTableInfoRepository
 {
     private readonly SqlServerDbTableInfoRepository _sqlServerRepository = new();

@@ -5,6 +5,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// SQL Serverからテーブルのカラム定義とインデックス情報を取得します。
+/// </summary>
 public class SqlServerDbTableSchemaRepository : IDbTableSchemaRepository
 {
     public async Task<IReadOnlyList<DbColumnInfo>> GetColumnsAsync(

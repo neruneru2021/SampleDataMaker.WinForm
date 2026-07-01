@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// 1テーブル分の生成値と、その値を追跡するメタ情報を保持します。
+/// </summary>
 public class GeneratedTestData
 {
     public DbTableInfo Table { get; }

@@ -4,6 +4,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Json;
 
+/// <summary>
+/// JSONファイルから通常データとカテゴリデータを読み込みます。
+/// </summary>
 public class JsonSampleDataRepository : ISampleDataRepository
 {
     private readonly string _filePath;

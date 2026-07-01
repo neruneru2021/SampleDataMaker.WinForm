@@ -3,6 +3,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Domain.Services;
 
+/// <summary>
+/// 生成済みデータへ外部キー値とカテゴリレコード情報を反映します。
+/// </summary>
 public class ForeignKeyTestDataApplier : IForeignKeyTestDataApplier
 {
     private readonly ISampleDataRepository _sampleDataRepository;
@@ -193,6 +196,9 @@ public class ForeignKeyTestDataApplier : IForeignKeyTestDataApplier
         return $"{schemaName}.{tableName}";
     }
 
+    /// <summary>
+    /// 外部キー適用中に生成値とメタ情報を更新可能な形で保持します。
+    /// </summary>
     private sealed class MutableGeneratedTestData
     {
         public DbTableInfo Table { get; }
@@ -240,6 +246,9 @@ public class ForeignKeyTestDataApplier : IForeignKeyTestDataApplier
         }
     }
 
+    /// <summary>
+    /// 外部キー適用中に1行分のメタ情報を更新可能な形で保持します。
+    /// </summary>
     private sealed class MutableGeneratedRowMetadata
     {
         public int RowIndex { get; }

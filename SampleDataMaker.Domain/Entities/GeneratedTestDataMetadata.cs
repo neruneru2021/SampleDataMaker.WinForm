@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// 生成された1行分のカテゴリ情報と境界値カラムを保持します。
+/// </summary>
 public class GeneratedRowMetadata
 {
     public int RowIndex { get; }
@@ -19,6 +22,9 @@ public class GeneratedRowMetadata
     }
 }
 
+/// <summary>
+/// 生成された1カラムのカテゴリ由来情報を保持します。
+/// </summary>
 public class GeneratedColumnMetadata
 {
     public string ColumnName { get; }

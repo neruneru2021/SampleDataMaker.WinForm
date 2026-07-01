@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// DBカラムの名前、型、桁数、NULL許容などの定義情報を表します。
+/// </summary>
 public class DbColumnInfo
 {
     public string SchemaName { get; set; } = string.Empty;

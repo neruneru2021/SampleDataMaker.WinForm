@@ -295,6 +295,9 @@ public sealed class ForeignKeyTestDataApplierTests
         };
     }
 
+    /// <summary>
+    /// 外部キー連携テストで使用するメモリ上のサンプルデータRepositoryです。
+    /// </summary>
     private sealed class TestSampleDataRepository : ISampleDataRepository
     {
         private readonly IReadOnlyList<SampleDataCategoryRecord> _records;

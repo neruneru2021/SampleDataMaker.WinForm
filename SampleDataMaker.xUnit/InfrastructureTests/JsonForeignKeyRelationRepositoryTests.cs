@@ -3,6 +3,9 @@ using SampleDataMaker.Infrastructure.Json;
 
 namespace SampleDataMaker.xUnit.InfrastructureTests;
 
+/// <summary>
+/// 外部キー設定JSONの方向情報を正しく移行できることを確認します。
+/// </summary>
 [TestClass]
 public sealed class JsonForeignKeyRelationRepositoryTests
 {

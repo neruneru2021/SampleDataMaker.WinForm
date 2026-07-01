@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// テストデータの出力先と、作成したファイルの一覧を表します。
+/// </summary>
 public class TestDataOutputResult
 {
     public string OutputDirectoryPath { get; }

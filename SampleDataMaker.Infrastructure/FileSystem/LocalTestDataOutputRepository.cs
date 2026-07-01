@@ -4,6 +4,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.FileSystem;
 
+/// <summary>
+/// 生成したテストデータをCSV、Markdown、SQLファイルとして保存します。
+/// </summary>
 public class LocalTestDataOutputRepository : ITestDataOutputRepository
 {
     public async Task<TestDataOutputResult> SaveAsync(

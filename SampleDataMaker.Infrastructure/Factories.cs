@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace SampleDataMaker.Infrastructure
 {
+    /// <summary>
+    /// Infrastructure層のRepository実装を生成します。
+    /// </summary>
     public static class Factories
     {
         public static ITableInfoRepository CreateTableInfoRepository()

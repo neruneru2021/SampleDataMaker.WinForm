@@ -4,6 +4,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Infrastructure.Database;
 
+/// <summary>
+/// DB種別に応じてカラム定義の取得先Repositoryを切り替えます。
+/// </summary>
 public class CompositeDbTableSchemaRepository : IDbTableSchemaRepository
 {
     private readonly SqlServerDbTableSchemaRepository _sqlServerRepository = new();

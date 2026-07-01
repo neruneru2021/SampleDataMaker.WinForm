@@ -1,5 +1,8 @@
 namespace SampleDataMaker.Domain.Entities;
 
+/// <summary>
+/// DBカラムに割り当てる通常種類またはカテゴリ項目の設定を表します。
+/// </summary>
 public class ColumnSampleDataSetting
 {
     public string ColumnName { get; set; } = string.Empty;

@@ -3,6 +3,9 @@ using SampleDataMaker.Domain.Repositories;
 
 namespace SampleDataMaker.Domain.Services;
 
+/// <summary>
+/// 各カラムの最小値・最大値などを使った境界値テストデータを生成します。
+/// </summary>
 public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
 {
     private readonly BoundaryTestValueFactory _valueFactory = new();
@@ -127,11 +130,17 @@ public class BoundaryTestDataGenerator : IBoundaryTestDataGenerator
         rowMetadata.Add(generatedRow.Metadata);
     }
 
+    /// <summary>
+    /// 境界値として生成した1行の値とメタ情報をまとめます。
+    /// </summary>
     private sealed record GeneratedBoundaryRow(
         IReadOnlyDictionary<string, string?> Values,
         GeneratedRowMetadata Metadata);
 }
 
+/// <summary>
+/// データ型と桁数に応じた境界値を作成します。
+/// </summary>
 internal class BoundaryTestValueFactory
 {
     private static readonly HashSet<string> TextTypes = new(StringComparer.OrdinalIgnoreCase)
